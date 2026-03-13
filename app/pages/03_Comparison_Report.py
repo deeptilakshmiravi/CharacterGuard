@@ -2,58 +2,77 @@ import streamlit as st
 import json
 import os
 
-st.set_page_config(page_title="Comparison View", layout="wide", page_icon="⚖️")
+# 1. Page Configuration
+st.set_page_config(page_title="Comparison Report | CharacterGuard", layout="wide")
 
-st.title("⚖️ Before vs. After Comparison")
-st.write("Compare how the baseline model and the hardened model handle the exact same attack.")
-st.divider()
+# 2. Ultimate Dark CSS (Fixes the white bar and text)
+st.markdown("""
+    <style>
+    /* Hide the white top bar and set background */
+    header, .stApp { background-color: #0f172a !important; }
+    
+    /* Force ALL text to White */
+    h1, h2, h3, p, span, div, label, b { color: #ffffff !important; }
 
-# Helper function to load JSON files from the data/reports folder
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] { background-color: #020617 !important; }
+    
+    /* Custom Styling for Chat Bubbles */
+    .stInfo, .stSuccess {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: #ffffff !important;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    /* Fix Divider Color */
+    hr { border-color: #334155 !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 3. Secure File Loading
 def load_transcript(filename):
-    # Start in 'app/pages', go up two levels ('..', '..'), then into 'data/reports'
     file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'reports', filename)
     try:
         with open(file_path, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
+            data = json.load(f)
+            # SAFETY CHECK: If the JSON doesn't have 'transcript', return an empty list
+            return data.get("transcript", [])
+    except (FileNotFoundError, json.JSONDecodeError):
         return None
 
-# Load the data
-before_data = load_transcript("before_transcript.json")
-after_data = load_transcript("after_transcript.json")
+# 4. Header
+st.title("⚖️ Comparison Report")
+st.write("Comparing Baseline vs. Hardened AI Responses")
+st.divider()
 
-# Safety net: If the files are missing, tell the user gracefully
-if not before_data or not after_data:
-    st.warning("⚠️ Waiting for Backend Team. Please ensure 'before_transcript.json' and 'after_transcript.json' exist in the main folder.")
-    st.stop()
+# 5. Load and Display Data
+before_list = load_transcript("before_transcript.json")
+after_list = load_transcript("after_transcript.json")
 
-# Layout the side-by-side columns
-col1, col2 = st.columns(2)
+if before_list is not None and after_list is not None:
+    col1, col2 = st.columns(2)
 
-# --- LEFT COLUMN (Before) ---
-with col1:
-    st.subheader("🔴 Baseline Model (Before)")
-    st.caption(f"Category: `{before_data.get('category')}` | Attack ID: `{before_data.get('attack_id')}`")
-    
-    # Loop through the messages array dynamically
-    for msg in before_data.get("messages", []):
-        if msg["role"] == "user":
-            with st.chat_message("user"):
-                st.write(msg["content"])
-        else:
-            with st.chat_message("assistant", avatar="🤖"):
-                st.error(msg["content"]) # Red bubble to show failure
+    with col1:
+        st.subheader("🔴 Baseline (Before)")
+        if not before_list:
+            st.warning("No transcript data found in before_transcript.json")
+        for msg in before_list:
+            role = msg.get('role', 'Unknown').capitalize()
+            content = msg.get('content', 'No content available')
+            st.markdown(f"**{role}:**")
+            st.info(content)
 
-# --- RIGHT COLUMN (After) ---
-with col2:
-    st.subheader("🟢 Hardened Model (After)")
-    st.caption(f"Category: `{after_data.get('category')}` | Attack ID: `{after_data.get('attack_id')}`")
-    
-    # Loop through the messages array dynamically
-    for msg in after_data.get("messages", []):
-        if msg["role"] == "user":
-            with st.chat_message("user"):
-                st.write(msg["content"])
-        else:
-            with st.chat_message("assistant", avatar="🤖"):
-                st.success(msg["content"]) # Green bubble to show success
+    with col2:
+        st.subheader("🟢 Hardened (After)")
+        if not after_list:
+            st.warning("No transcript data found in after_transcript.json")
+        for msg in after_list:
+            role = msg.get('role', 'Unknown').capitalize()
+            content = msg.get('content', 'No content available')
+            st.markdown(f"**{role}:**")
+            st.success(content)
+else:
+    st.error("⚠️ Data files missing in data/reports/")
