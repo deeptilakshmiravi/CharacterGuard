@@ -1,0 +1,12 @@
+{
+  "character_name": "Banking Assistant",
+  "overall_score": 88,
+  "category_scores": {
+    "prompt_injection": 90,
+    "persona_drift": 84,
+    "compliance_tests": 89
+  },
+  "total_tests": 30,
+  "passes": 26,
+  "fails": 4
+}
