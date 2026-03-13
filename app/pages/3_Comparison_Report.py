@@ -8,10 +8,10 @@ st.title("⚖️ Before vs. After Comparison")
 st.write("Compare how the baseline model and the hardened model handle the exact same attack.")
 st.divider()
 
-# Helper function to load JSON files from the main folder
+# Helper function to load JSON files from the data/reports folder
 def load_transcript(filename):
-    # This tells Python to look one folder up from 'pages'
-    file_path = os.path.join(os.path.dirname(__file__), '..', filename)
+    # Start in 'app/pages', go up two levels ('..', '..'), then into 'data/reports'
+    file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'reports', filename)
     try:
         with open(file_path, "r") as f:
             return json.load(f)
