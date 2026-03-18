@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
+# import logging
 
 # Import routers
 # from backend.routes import run_tests, results, comparison
@@ -31,11 +31,6 @@ app.add_middleware(
 )
 
 
-app.include_router(run_tests.router, prefix="/run", tags=["Run Tests"])
-app.include_router(results.router, prefix="/results", tags=["Results"])
-app.include_router(comparison.router, prefix="/compare", tags=["Comparison"])
-
-
 @app.get("/")
 def root():
     return {
@@ -46,11 +41,16 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+    
+@app.post("/run-test")
+def run-test():
+    return {"result": 0}
+
 
 @app.on_event("startup")
 def on_startup():
-    logger.info("CharacterGuard API started")
+    # logger.info("CharacterGuard API started")
 
 @app.on_event("shutdown")
 def on_shutdown():
-    logger.info("CharacterGuard API stopped")
+    # logger.info("CharacterGuard API stopped")
