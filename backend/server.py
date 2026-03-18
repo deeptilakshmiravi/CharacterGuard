@@ -43,7 +43,7 @@ def health_check():
     return {"status": "ok"}
     
 @app.post("/run-test")
-def run-test():
+def runTest():
     return {"result": 0}
 
 
