@@ -45,12 +45,3 @@ def health_check():
 @app.post("/run-test")
 def runTest():
     return {"result": 0}
-
-
-@app.on_event("startup")
-def on_startup():
-    # logger.info("CharacterGuard API started")
-
-@app.on_event("shutdown")
-def on_shutdown():
-    # logger.info("CharacterGuard API stopped")
