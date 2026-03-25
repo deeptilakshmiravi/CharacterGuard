@@ -23,10 +23,10 @@ Dimensions:
 This module is purely deterministic math. There are no API calls, no LLM.
 """
 
-import logging
+#import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ class Scorer:
             "overall":         round(overall, 2),
         }
 
-        logger.debug(f"Row scores: {scores}")
+        #logger.debug(f"Row scores: {scores}")
         return scores
 
     def aggregate(self, all_scores: list[dict[str, float]]) -> dict[str, float]:
@@ -175,7 +175,7 @@ class Scorer:
             values = [s.get(dim, 1.0) for s in all_scores]
             aggregated[dim] = round(sum(values) / len(values), 2)
 
-        logger.debug(f"Aggregate scores: {aggregated}")
+        #logger.debug(f"Aggregate scores: {aggregated}")
         return aggregated
 
     def generate_remediation_tips(self, aggregate_scores: dict[str, float]) -> list[str]:

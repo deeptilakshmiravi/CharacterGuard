@@ -12,7 +12,7 @@ All of that lives in llm_judge.py.
 """
 
 import json
-import logging
+#import logging
 import os
 import time
 from typing import Optional
@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -95,7 +95,7 @@ class OpenRouterClient:
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                logger.debug(f"OpenRouter API call attempt {attempt}/{MAX_RETRIES}")
+                #logger.debug(f"OpenRouter API call attempt {attempt}/{MAX_RETRIES}")
 
                 response = requests.post(
                     url=OPENROUTER_URL,
@@ -108,24 +108,24 @@ class OpenRouterClient:
                 return self._extract_text(response.json())
 
             except requests.exceptions.Timeout:
-                logger.warning(f"OpenRouter request timed out (attempt {attempt})")
+                #logger.warning(f"OpenRouter request timed out (attempt {attempt})")
 
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code
                 if status == 429:
                     # Rate limited, wait longer before retrying
-                    logger.warning(f"Rate limited by OpenRouter (attempt {attempt}). Waiting...")
+                    #logger.warning(f"Rate limited by OpenRouter (attempt {attempt}). Waiting...")
                     time.sleep(RETRY_DELAY * attempt)
                     continue
-                elif status == 400:
+                #elif status == 400:
                     # Bad request , retrying won't help
-                    logger.error(f"OpenRouter rejected the request (400): {e.response.text}")
-                    raise
-                else:
-                    logger.warning(f"OpenRouter HTTP error {status} (attempt {attempt}): {e}")
+                    #logger.error(f"OpenRouter rejected the request (400): {e.response.text}")
+                    #raise
+                #else:
+                    #logger.warning(f"OpenRouter HTTP error {status} (attempt {attempt}): {e}")
 
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"OpenRouter request failed (attempt {attempt}): {e}")
+            #except requests.exceptions.RequestException as e:
+                #logger.warning(f"OpenRouter request failed (attempt {attempt}): {e}")
 
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY)
@@ -185,5 +185,5 @@ class OpenRouterClient:
         try:
             return response_json["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
-            logger.error(f"Unexpected OpenRouter response structure: {response_json}")
+            #logger.error(f"Unexpected OpenRouter response structure: {response_json}")
             raise RuntimeError(f"Could not extract text from OpenRouter response: {e}")

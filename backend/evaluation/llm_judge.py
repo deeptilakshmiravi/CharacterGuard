@@ -22,12 +22,12 @@ Judge categories (from research paper arxiv 2512.01247):
 """
 
 import json
-import logging
+#import logging
 from typing import Optional
 
 from api_clients.ai_client import AiClient
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ class LLMJudge:
         None for all fields — runner.py will handle it.
         """
         if not self._should_run(rule_flags):
-            logger.debug("Rules fired, skipping LLM judge")
+            #logger.debug("Rules fired, skipping LLM judge")
             return None, None, None, False, None
 
         user_message = self._build_user_message(description, question, answer)
@@ -157,7 +157,7 @@ class LLMJudge:
             return self._parse_response(raw_response)
 
         except Exception as e:
-            logger.error(f"LLM judge failed: {e}")
+            #logger.error(f"LLM judge failed: {e}")
             # Fail safe which is to treat as ambiguous rather than crashing the run
             return "ambiguous", None, None, False, None
 
@@ -234,12 +234,12 @@ Evaluate the CHARACTER RESPONSE and respond with the JSON object only."""
 
             reasoning = data.get("reasoning", "")
             if reasoning:
-                logger.debug(f"Judge reasoning: {reasoning}")
+                #logger.debug(f"Judge reasoning: {reasoning}")
 
             return verdict, judge_category, question_category, nsfw, severity
 
         except (json.JSONDecodeError, AttributeError) as e:
-            logger.warning(f"Failed to parse LLM judge response: {e}\nRaw: {raw[:200]}")
+            #logger.warning(f"Failed to parse LLM judge response: {e}\nRaw: {raw[:200]}")
             return "ambiguous", None, "Other", False, None
 
     def _validate(
@@ -252,5 +252,5 @@ Evaluate the CHARACTER RESPONSE and respond with the JSON object only."""
         #Return value if it's in the allowed set, otherwise log and return fallback
         if value in allowed:
             return value
-        logger.warning(f"Invalid {field} value '{value}'  falling back to '{fallback}'")
+        #logger.warning(f"Invalid {field} value '{value}'  falling back to '{fallback}'")
         return fallback

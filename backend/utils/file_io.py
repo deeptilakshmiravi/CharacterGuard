@@ -18,7 +18,7 @@ Supported input formats:
 
 import csv
 import json
-import logging
+#import logging
 import dataclasses
 from datetime import datetime
 from pathlib import Path
@@ -28,7 +28,7 @@ import pandas as pd
 
 from runner import TranscriptRow, RunResult, RowResult
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -72,7 +72,7 @@ def parse_upload(description: str, csv_file) -> list[TranscriptRow]:
             answer = str(row["answer"]).strip()
 
             if not question or not answer:
-                logger.warning(f"Skipping row {i} — empty question or answer")
+                #logger.warning(f"Skipping row {i} — empty question or answer")
                 continue
 
             rows.append(TranscriptRow(
@@ -87,10 +87,10 @@ def parse_upload(description: str, csv_file) -> list[TranscriptRow]:
             ))
 
     except Exception as e:
-        logger.error(f"Failed to parse upload CSV: {e}")
+        #logger.error(f"Failed to parse upload CSV: {e}")
         raise ValueError(f"Could not parse conversation CSV: {e}")
 
-    logger.info(f"Parsed {len(rows)} rows from production upload")
+    #logger.info(f"Parsed {len(rows)} rows from production upload")
     return rows
 
 
@@ -137,7 +137,7 @@ def parse_dataset_sample(csv_path: str | Path) -> list[TranscriptRow]:
             description = str(row["description"]).strip()
 
             if not question or not answer:
-                logger.warning(f"Skipping dataset row {i} — empty question or answer")
+                #logger.warning(f"Skipping dataset row {i} — empty question or answer")
                 continue
 
             # Parse ground truth fields safely
@@ -156,10 +156,10 @@ def parse_dataset_sample(csv_path: str | Path) -> list[TranscriptRow]:
             ))
 
     except Exception as e:
-        logger.error(f"Failed to parse validation dataset: {e}")
+        #logger.error(f"Failed to parse validation dataset: {e}")
         raise ValueError(f"Could not parse validation CSV: {e}")
 
-    logger.info(f"Parsed {len(rows)} rows from validation dataset at {path}")
+    #logger.info(f"Parsed {len(rows)} rows from validation dataset at {path}")
     return rows
 
 
@@ -186,9 +186,9 @@ def save_run_result(result: RunResult) -> Path:
     try:
         with open(output_path, "w") as f:
             json.dump(_run_result_to_dict(result), f, indent=2)
-        logger.info(f"RunResult saved to {output_path}")
+        #logger.info(f"RunResult saved to {output_path}")
     except Exception as e:
-        logger.error(f"Failed to save RunResult: {e}")
+        #logger.error(f"Failed to save RunResult: {e}")
         raise
 
     return output_path
@@ -207,17 +207,17 @@ def load_run_result(run_id: str) -> Optional[RunResult]:
     matches = list(RAW_RUNS_DIR.glob(f"run_{run_id[:8]}*.json"))
 
     if not matches:
-        logger.warning(f"No saved run found for run_id prefix '{run_id[:8]}'")
+        #logger.warning(f"No saved run found for run_id prefix '{run_id[:8]}'")
         return None
 
     path = matches[0]
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        logger.info(f"Loaded RunResult from {path}")
+        #logger.info(f"Loaded RunResult from {path}")
         return _dict_to_run_result(data)
     except Exception as e:
-        logger.error(f"Failed to load RunResult from {path}: {e}")
+        #logger.error(f"Failed to load RunResult from {path}: {e}")
         return None
 
 
@@ -243,8 +243,8 @@ def list_saved_runs() -> list[dict]:
                 "timestamp":   path.stem.split("_")[-1],  # extract from filename
                 "path":        str(path),
             })
-        except Exception as e:
-            logger.warning(f"Could not read summary from {path}: {e}")
+        #except Exception as e:
+            #logger.warning(f"Could not read summary from {path}: {e}")
 
     return summaries
 
@@ -268,7 +268,7 @@ def _parse_float(value, row_index: int) -> Optional[float]:
     try:
         return float(value)
     except (TypeError, ValueError):
-        logger.warning(f"Could not parse float at row {row_index}: '{value}'")
+        #logger.warning(f"Could not parse float at row {row_index}: '{value}'")
         return None
 
 
@@ -281,7 +281,7 @@ def _parse_bool(value, row_index: int) -> Optional[bool]:
     try:
         return bool(value)
     except (TypeError, ValueError):
-        logger.warning(f"Could not parse bool at row {row_index}: '{value}'")
+        #logger.warning(f"Could not parse bool at row {row_index}: '{value}'")
         return None
 
 

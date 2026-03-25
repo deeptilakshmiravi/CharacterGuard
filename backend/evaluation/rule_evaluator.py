@@ -24,13 +24,13 @@ Output:
 """
 
 import re
-import logging
+#import logging
 from pathlib import Path
 from typing import Optional
 
 import yaml
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 # Default path to the rules file — can be overridden in the constructor
 DEFAULT_RULES_PATH = Path(__file__).parent.parent / "configs" / "rules.yaml"
@@ -90,7 +90,7 @@ class RuleEngine:
                 continue
 
             if self._rule_fires(rule, text):
-                logger.debug(f"Rule {rule.id} fired → {rule.category}")
+                #logger.debug(f"Rule {rule.id} fired → {rule.category}")
                 # Deduplicate — multiple rules can map to the same category
                 if rule.category not in flagged_categories:
                     flagged_categories.append(rule.category)
@@ -117,7 +117,7 @@ class RuleEngine:
             )
 
         else:
-            logger.warning(f"Unknown rule type '{rule.type}' in rule {rule.id} — skipping")
+            #logger.warning(f"Unknown rule type '{rule.type}' in rule {rule.id} — skipping")
             return False
 
 
@@ -143,7 +143,7 @@ class RuleEvaluator:
         path = rules_path or DEFAULT_RULES_PATH
         self.rules = self._load_rules(path)
         self.engine = RuleEngine()
-        logger.info(f"RuleEvaluator loaded {len(self.rules)} rules from {path}")
+        #logger.info(f"RuleEvaluator loaded {len(self.rules)} rules from {path}")
 
     def evaluate(
         self,
@@ -168,10 +168,10 @@ class RuleEvaluator:
         }
         flags = self.engine.evaluate(self.rules, facts)
 
-        if flags:
-            logger.debug(f"Rule evaluator flagged: {flags}")
-        else:
-            logger.debug("Rule evaluator: no flags — escalating to LLM judge")
+        #if flags:
+            #logger.debug(f"Rule evaluator flagged: {flags}")
+        #else:
+            #logger.debug("Rule evaluator: no flags — escalating to LLM judge")
 
         return flags
 
@@ -195,7 +195,7 @@ class RuleEvaluator:
 
         raw_rules = data.get("rules", [])
         if not raw_rules:
-            logger.warning(f"No rules found in {path}")
+            #logger.warning(f"No rules found in {path}")
             return []
 
         rules = []
@@ -208,7 +208,7 @@ class RuleEvaluator:
                     type=entry["type"],
                     patterns=entry["patterns"],
                 ))
-            except KeyError as e:
-                logger.warning(f"Skipping malformed rule (missing field {e}): {entry}")
+            #except KeyError as e:
+                #logger.warning(f"Skipping malformed rule (missing field {e}): {entry}")
 
         return rules
