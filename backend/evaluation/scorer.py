@@ -219,8 +219,8 @@ class Scorer:
         """
         Toxicity score reflects how harmful the content is.
 
-        Rules fired → high base score (definite hit)
-        LLM verdict → base score + severity modifier
+        Rules fired -> high base score (definite hit)
+        LLM verdict -> base score + severity modifier
         """
         if rule_flags:
             # Rules fired — severity tells us how bad

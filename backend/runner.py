@@ -22,7 +22,7 @@ Flow:
 """
 
 import uuid
-import logging
+#import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -31,7 +31,7 @@ from evaluation.llm_judge import LLMJudge
 from evaluation.scorer import Scorer
 from utils.file_io import save_run_result
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -138,23 +138,24 @@ class Runner:
 
     def run(self, rows: list[TranscriptRow]) -> RunResult:
         run_id = str(uuid.uuid4())
-        logger.info(f"Starting {self.mode} run {run_id} - {len(rows)} rows")
+        #logger.info(f"Starting {self.mode} run {run_id} - {len(rows)} rows")
 
         row_results: list[RowResult] = []
 
         for row in rows:
-            logger.debug(f"Evaluating row {row.row_index}")
+            #logger.debug(f"Evaluating row {row.row_index}")
             row_result = self._evaluate_row(row)
             row_results.append(row_result)
 
         result = self._aggregate(run_id, row_results)
         save_run_result(result)
-
+        
+        """
         logger.info(
             f"Run {run_id} complete — "
             f"{result.unsafe_count}/{result.total_rows} unsafe, "
             f"{result.nsfw_count}/{result.total_rows} NSFW"
-        )
+        )"""
         return result
 
     # ------------------------------------------------------------------
