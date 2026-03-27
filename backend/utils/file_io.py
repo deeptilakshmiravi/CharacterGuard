@@ -18,11 +18,12 @@ Supported input formats:
 
 import csv
 import json
-#import logging
+import logging
 import dataclasses
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Union, Optional, List, Dict, Tuple
+
 
 import pandas as pd
 
@@ -42,7 +43,7 @@ RAW_RUNS_DIR.mkdir(parents=True, exist_ok=True)
 # Production mode — parse user upload
 # ---------------------------------------------------------------------------
 
-def parse_upload(description: str, csv_file) -> list[TranscriptRow]:
+def parse_upload(description: str, csv_file) -> List[TranscriptRow]:
     """
     Parse a content creator's upload into TranscriptRow objects.
 
@@ -95,10 +96,10 @@ def parse_upload(description: str, csv_file) -> list[TranscriptRow]:
 
 
 # ---------------------------------------------------------------------------
-# Validation mode for parsing research dataset sample
+# Validation mode — parse research dataset sample
 # ---------------------------------------------------------------------------
 
-def parse_dataset_sample(csv_path: str | Path) -> list[TranscriptRow]:
+def parse_dataset_sample(csv_path: Union[str, Path]) -> List[TranscriptRow]:    
     """
     Parse the validation sample CSV (from the research dataset) into
     TranscriptRow objects, including ground truth labels.
@@ -204,7 +205,7 @@ def load_run_result(run_id: str) -> Optional[RunResult]:
     Returns:
         RunResult if found, None otherwise
     """
-    matches = list(RAW_RUNS_DIR.glob(f"run_{run_id[:8]}*.json"))
+    matches = List(RAW_RUNS_DIR.glob(f"run_{run_id[:8]}*.json"))
 
     if not matches:
         #logger.warning(f"No saved run found for run_id prefix '{run_id[:8]}'")
@@ -221,7 +222,7 @@ def load_run_result(run_id: str) -> Optional[RunResult]:
         return None
 
 
-def list_saved_runs() -> list[dict]:
+def list_saved_runs() -> List[Dict]:
     """
     List all saved runs in data/raw_runs/.
 
@@ -243,8 +244,9 @@ def list_saved_runs() -> list[dict]:
                 "timestamp":   path.stem.split("_")[-1],  # extract from filename
                 "path":        str(path),
             })
-        #except Exception as e:
+        except Exception as e:
             #logger.warning(f"Could not read summary from {path}: {e}")
+            print("cannot read summary from path: ", e)
 
     return summaries
 
@@ -253,27 +255,27 @@ def list_saved_runs() -> list[dict]:
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _validate_columns(df: pd.DataFrame, required: list[str], source: str):
-    #Raise a clear error if expected columns are missing
+def _validate_columns(df: pd.DataFrame, required: List[str], source: str):
+    """Raise a clear error if expected columns are missing."""
     missing = [col for col in required if col not in df.columns]
     if missing:
         raise ValueError(
             f"Missing columns in {source} CSV: {missing}. "
-            f"Found columns: {list(df.columns)}"
+            f"Found columns: {List(df.columns)}"
         )
 
 
 def _parse_float(value, row_index: int) -> Optional[float]:
-    #Safely parse a float value from a CSV cell
+    """Safely parse a float value from a CSV cell."""
     try:
         return float(value)
     except (TypeError, ValueError):
-        #logger.warning(f"Could not parse float at row {row_index}: '{value}'")
+      # logger.warning(f"Could not parse float at row {row_index}: '{value}'")
         return None
 
 
 def _parse_bool(value, row_index: int) -> Optional[bool]:
-    #Safely parse a bool from a CSV cell (handles TRUE/FALSE strings).
+    """Safely parse a bool from a CSV cell (handles TRUE/FALSE strings)."""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -281,7 +283,7 @@ def _parse_bool(value, row_index: int) -> Optional[bool]:
     try:
         return bool(value)
     except (TypeError, ValueError):
-        #logger.warning(f"Could not parse bool at row {row_index}: '{value}'")
+      # logger.warning(f"Could not parse bool at row {row_index}: '{value}'")
         return None
 
 
@@ -325,7 +327,7 @@ def _run_result_to_dict(result: RunResult) -> dict:
 
 
 def _dict_to_run_result(data: dict) -> RunResult:
-    #Reconstruct a RunResult from a saved JSON dict
+    """Reconstruct a RunResult from a saved JSON dict."""
     row_results = [
         RowResult(
             row_index=             r["row_index"],

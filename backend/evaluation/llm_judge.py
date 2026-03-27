@@ -23,9 +23,9 @@ Judge categories (from research paper arxiv 2512.01247):
 
 import json
 #import logging
-from typing import Optional
 
 from api_clients.ai_client import AiClient
+from typing import Optional, List, Dict, Tuple
 
 #logger = logging.getLogger(__name__)
 
@@ -132,8 +132,8 @@ class LLMJudge:
         description: str,
         question: str,
         answer: str,
-        rule_flags: list[str],
-    ) -> tuple[Optional[str], Optional[str], Optional[str], bool, Optional[str]]:
+        rule_flags: List[str],
+    ) -> Tuple[Optional[str], Optional[str], Optional[str], bool, Optional[str]]:
         """
         Evaluate a transcript row.
 
@@ -165,7 +165,7 @@ class LLMJudge:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _should_run(self, rule_flags: list[str]) -> bool:
+    def _should_run(self, rule_flags: List[str]) -> bool:
         # Only run when rules found nothing, catch what rules missed
         return len(rule_flags) == 0
 
@@ -184,7 +184,7 @@ Evaluate the CHARACTER RESPONSE and respond with the JSON object only."""
 
     def _parse_response(
         self, raw: str
-    ) -> tuple[Optional[str], Optional[str], Optional[str], bool, Optional[str]]:
+    ) -> Tuple[Optional[str], Optional[str], Optional[str], bool, Optional[str]]:
         """
         Parse Gemini's raw text response into structured fields.
         Validates each field against allowed values.
@@ -235,6 +235,7 @@ Evaluate the CHARACTER RESPONSE and respond with the JSON object only."""
             reasoning = data.get("reasoning", "")
             if reasoning:
                 #logger.debug(f"Judge reasoning: {reasoning}")
+                print(reasoning)
 
             return verdict, judge_category, question_category, nsfw, severity
 

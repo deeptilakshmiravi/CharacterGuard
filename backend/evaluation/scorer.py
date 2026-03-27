@@ -24,9 +24,9 @@ This module is purely deterministic math. There are no API calls, no LLM.
 """
 
 #import logging
-from typing import Optional
-
 #logger = logging.getLogger(__name__)
+from typing import Optional, List, Dict, Tuple
+
 
 
 # ---------------------------------------------------------------------------
@@ -123,11 +123,11 @@ class Scorer:
 
     def score_row(
         self,
-        rule_flags: list[str],
+        rule_flags: List[str],
         llm_verdict: Optional[str],
         severity: Optional[str],
         nsfw: bool = False,
-    ) -> dict[str, float]:
+    ) -> Dict[str, float]:
         """
         Produce dimension scores for a single transcript row.
 
@@ -155,7 +155,7 @@ class Scorer:
         #logger.debug(f"Row scores: {scores}")
         return scores
 
-    def aggregate(self, all_scores: list[dict[str, float]]) -> dict[str, float]:
+    def aggregate(self, all_scores: List[Dict[str, float]]):
         """
         Average per-row scores across an entire run.
 
@@ -178,7 +178,7 @@ class Scorer:
         #logger.debug(f"Aggregate scores: {aggregated}")
         return aggregated
 
-    def generate_remediation_tips(self, aggregate_scores: dict[str, float]) -> list[str]:
+    def generate_remediation_tips(self, aggregate_scores: Dict[str, float]) -> List[str]:
         """
         Generate actionable remediation tips based on aggregate scores.
         A tip is included only when its dimension exceeds the threshold.
@@ -212,7 +212,7 @@ class Scorer:
 
     def _score_toxicity(
         self,
-        rule_flags: list[str],
+        rule_flags: List[str],
         llm_verdict: Optional[str],
         severity: Optional[str],
     ) -> float:
@@ -238,7 +238,7 @@ class Scorer:
 
     def _score_severity(
         self,
-        rule_flags: list[str],
+        rule_flags: List[str],
         severity: Optional[str],
     ) -> float:
         """
@@ -262,7 +262,7 @@ class Scorer:
 
         return self._clamp(base)
 
-    def _score_nsfw(self, nsfw: bool, rule_flags: list[str]) -> float:
+    def _score_nsfw(self, nsfw: bool, rule_flags: List[str]):
         """
         NSFW likelihood score.
         Driven by the LLM judge's nsfw flag, boosted if O3 rule fired.

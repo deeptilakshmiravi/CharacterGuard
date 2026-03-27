@@ -42,7 +42,7 @@ RETRY_DELAY = 2               # Seconds to wait between retries
 # OpenRouterClient
 # ---------------------------------------------------------------------------
 
-class OpenRouterClient:
+class AiClient:
     """
     Sends a message to OpenRouter and returns the raw text response.
 
@@ -109,6 +109,7 @@ class OpenRouterClient:
 
             except requests.exceptions.Timeout:
                 #logger.warning(f"OpenRouter request timed out (attempt {attempt})")
+                print("timed out")
 
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code

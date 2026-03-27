@@ -24,12 +24,12 @@ Flow:
 import uuid
 #import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List, Dict, Tuple
 
 from evaluation.rule_evaluator import RuleEvaluator
 from evaluation.llm_judge import LLMJudge
 from evaluation.scorer import Scorer
-from utils.file_io import save_run_result
+#from utils.file_io import save_run_result
 
 #logger = logging.getLogger(__name__)
 
@@ -67,13 +67,13 @@ class RowResult:
     answer: str
 
     # Our evaluator outputs
-    rule_flags: list[str]                # e.g. ["self_harm", "hate_speech"]
+    rule_flags: List[str]                # e.g. ["self_harm", "hate_speech"]
     llm_judge_verdict: Optional[str]     # "safe" | "unsafe" | "ambiguous"
     judge_category: Optional[str]        # e.g. "O2: Unfair Representation"
     question_category: Optional[str]     # e.g. "Hypothetical Scenario"
     nsfw: bool
     severity: Optional[str]             # "minor" | "major"
-    scores: dict                         # dimension -> float e.g. {"toxicity": 0.8}
+    scores: Dict                         # dimension -> float e.g. {"toxicity": 0.8}
 
     # Only populated in validation mode
     ground_truth_score: Optional[float] = None
@@ -90,9 +90,9 @@ class RunResult:
     total_rows: int
     unsafe_count: int
     nsfw_count: int
-    row_results: list[RowResult]
-    aggregate_scores: dict               # dimension -> float (averaged across rows)
-    remediation_tips: list[str]
+    row_results: List[RowResult]
+    aggregate_scores: Dict               # dimension -> float (averaged across rows)
+    remediation_tips: List[str]
 
     # Only populated in validation mode
     ground_truth_agreement_rate: Optional[float] = None   # 0.0 - 1.0
@@ -136,11 +136,12 @@ class Runner:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def run(self, rows: list[TranscriptRow]) -> RunResult:
+    def run(self, rows: List[TranscriptRow]) -> RunResult:
+        from utils.file_io import save_run_result
         run_id = str(uuid.uuid4())
         #logger.info(f"Starting {self.mode} run {run_id} - {len(rows)} rows")
 
-        row_results: list[RowResult] = []
+        row_results: List[RowResult] = []
 
         for row in rows:
             #logger.debug(f"Evaluating row {row.row_index}")
@@ -213,7 +214,7 @@ class Runner:
             score_delta=score_delta,
         )
 
-    def _aggregate(self, run_id: str, row_results: list[RowResult]) -> RunResult:
+    def _aggregate(self, run_id: str, row_results: List[RowResult]) -> RunResult:
         # Aggregate per-row results into a final RunResult
         unsafe_rows = [r for r in row_results if r.llm_judge_verdict == "unsafe" or r.rule_flags]
         nsfw_rows = [r for r in row_results if r.nsfw]
@@ -241,7 +242,7 @@ class Runner:
             category_match_rate=category_match_rate,
         )
 
-    def _compute_agreement_rate(self, row_results: list[RowResult]) -> float:
+    def _compute_agreement_rate(self, row_results: List[RowResult]) -> float:
         """
         Measures how closely our overall scores match the dataset's judge_score.
         Uses a tolerance threshold — if our score is within 1 point of ground truth,
@@ -254,7 +255,7 @@ class Runner:
         agreements = [r for r in rows_with_truth if abs(r.score_delta) <= TOLERANCE]
         return round(len(agreements) / len(rows_with_truth), 3)
 
-    def _compute_category_match_rate(self, row_results: list[RowResult]) -> float:
+    def _compute_category_match_rate(self, row_results: List[RowResult]) -> float:
         # Measures how often our judge_category matches the dataset's judge_category
         rows_with_truth = [r for r in row_results if r.ground_truth_category is not None]
         if not rows_with_truth:
