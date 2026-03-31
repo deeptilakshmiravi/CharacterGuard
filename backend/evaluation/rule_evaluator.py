@@ -84,8 +84,7 @@ class RuleEvaluator:
         question: str = "",
     ) -> List[str]:
         facts = {
-            "answer": answer,
-            "description": description,
+            "answer": answer
         }
 
         flags = self.engine.evaluate(self.rules, facts)

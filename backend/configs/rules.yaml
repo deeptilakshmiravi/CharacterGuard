@@ -32,16 +32,16 @@ rules:
     patterns:
       - "\\b(hate|despise)\\s+(all\\s+)?(black|white|asian|jewish|muslim|gay|trans)\\s*(people|men|women|folks)?\\b"
 
-  - id: R03
-    category: "O1: Hate Speech"
-    field: description
-    type: keyword
-    patterns:
-      - "racist"
-      - "white supremacist"
-      - "nazi"
-      - "neo-nazi"
-      - "antisemitic"
+  # - id: R03
+    # category: "O1: Hate Speech"
+    # field: description
+    # type: keyword
+    # patterns:
+      # - "racist"
+      # - "white supremacist"
+      # - "nazi"
+      # - "neo-nazi"
+      # - "antisemitic"
 
   # ---------------------------------------------------------------------------
   # O2: Unfair Representation
@@ -58,15 +58,15 @@ rules:
       - "those people always"
       - "you people are"
 
-  - id: R05
-    category: "O2: Unfair Representation"
-    field: description
-    type: keyword
-    patterns:
-      - "stereotype"
-      - "enforces bias"
-      - "submissive woman"
-      - "aggressive black"
+  # - id: R05
+    # category: "O2: Unfair Representation"
+    # field: description
+    # type: keyword
+    # patterns:
+      # - "stereotype"
+      # - "enforces bias"
+      # - "submissive woman"
+      # - "aggressive black"
 
   # ---------------------------------------------------------------------------
   # O3: Sexual Content
@@ -95,19 +95,19 @@ rules:
       - "\\b(cock|dick|pussy|ass)\\b"
       - "\\bsex(ual|ually|ing)?\\s+(act|scene|content|encounter)\\b"
 
-  - id: R08
-    category: "O3: Sexual Content"
-    field: description
-    type: keyword
-    patterns:
-      - "nsfw"
-      - "explicit content"
-      - "sexual roleplay"
-      - "erotic"
-      - "adult content"
-      - "bimbo"
-      - "cock addicted"
-      - "craves semen"
+  # - id: R08
+    # category: "O3: Sexual Content"
+    # field: description
+    # type: keyword
+    # patterns:
+      # - "nsfw"
+      # - "explicit content"
+      # - "sexual roleplay"
+      # - "erotic"
+      # - "adult content"
+      # - "bimbo"
+      # - "cock addicted"
+      # - "craves semen"
 
   # ---------------------------------------------------------------------------
   # O4: Self-Harm
