@@ -29,7 +29,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "google/gemma-3-12b-it:free"
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 DEFAULT_MAX_TOKENS = 512      # Judge responses are short — no need for more
 DEFAULT_TEMPERATURE = 0.0     # Zero temperature = deterministic, consistent verdicts

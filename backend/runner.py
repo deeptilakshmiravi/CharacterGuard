@@ -74,7 +74,7 @@ class RowResult:
     nsfw: bool
     severity: Optional[str]             # "minor" | "major"
     scores: Dict                         # dimension -> float e.g. {"toxicity": 0.8}
-    all_categories: list[str]
+    all_categories: List[str]
      
     # Only populated in validation mode
     ground_truth_score: Optional[float] = None
@@ -166,7 +166,6 @@ class Runner:
 
     def _evaluate_row(self, row: TranscriptRow) -> RowResult:
         # Run one transcript row through the full evaluation pipeline
-
         # 1. Rule-based layer (always runs first — fast, no API cost)
         rule_flags = self.rule_evaluator.evaluate(
             description=row.character_description,
@@ -174,21 +173,17 @@ class Runner:
             answer=row.answer,
         )
         
-        if rule_flags:
-            final_judge_category = rule_flags[0]   # primary = first flag
-        else:
-            final_judge_category = judge_category  # from LLM
-
         # 2. LLM judge layer
-        # Runs when rules are silent (catch subtle/nuanced cases)
-        # or when rules fire (confirm severity and get category label)
-        llm_verdict, judge_category, question_category, nsfw, severity = \
+        llm_verdict, llm_category, question_category, nsfw, severity = \
             self.llm_judge.judge(
                 description=row.character_description,
                 question=row.question,
                 answer=row.answer,
                 rule_flags=rule_flags,
             )
+        
+        # Primary category: rule wins if fired, otherwise use LLM
+        final_judge_category = rule_flags[0] if rule_flags else llm_category
 
         # 3. Dimension scores
         scores = self.scorer.score_row(
@@ -197,21 +192,19 @@ class Runner:
             severity=severity,
             nsfw=nsfw
         )
-
         # 4. Ground truth delta (validation mode only)
         our_score = scores.get("overall", 0.0)
         score_delta = None
         if self.mode == "validation" and row.ground_truth_score is not None:
             score_delta = round(our_score - row.ground_truth_score, 3)
-
         return RowResult(
             row_index=row.row_index,
             question=row.question,
             answer=row.answer,
             rule_flags=rule_flags,
             llm_judge_verdict=llm_verdict,
-            judge_category=judge_category,
-            all_categories=rule_flags if rule_flags else ([judge_category] if judge_category else []),
+            judge_category=final_judge_category,
+            all_categories=list(set(rule_flags + ([llm_category] if llm_category else []))),
             question_category=question_category,
             nsfw=nsfw,
             severity=severity,
