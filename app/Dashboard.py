@@ -1,110 +1,57 @@
 import streamlit as st
-import json
-import os
-import pandas as pd
 import requests
+import pandas as pd
 
-# 1. Page Configuration
-st.set_page_config(page_title="CharacterGuard | Dashboard", layout="wide", page_icon="🛡️")
+# Configure the page
+st.set_page_config(page_title="CharacterGuard | Production", page_icon="🛡️", layout="wide")
 
-# 2. Ultimate Dark CSS (Unified Styling)
-st.markdown("""
-    <style>
-    header, .stApp { background-color: #0f172a !important; }
-    h1, h2, h3, p, span, div, label { color: #ffffff !important; }
-    [data-testid="stMetric"] {
-        background-color: #1e293b !important;
-        border: 1px solid #334155 !important;
-        padding: 20px !important;
-        border-radius: 12px !important;
-    }
-    [data-testid="stMetricValue"] { color: #38bdf8 !important; }
-    [data-testid="stSidebar"] { background-color: #020617 !important; }
-    hr { border-color: #334155 !important; }
-    [data-testid="stSidebarNav"] span { color: #ffffff !important; }
-    </style>
-    """, unsafe_allow_html=True)
+st.title("🛡️ CharacterGuard: Production Evaluation")
+st.markdown("Upload a character's persona and their conversation history to evaluate their safety.")
 
-# 3. Sidebar - API Health Check (Member 1 Integration)
-with st.sidebar:
-    st.write("### 🔌 System Status")
-    try:
-        # Calling Member 1's Render URL
-        res = requests.get("https://charactergaurd-1.onrender.com/health", timeout=3)
-        if res.status_code == 200:
-            st.success("Backend: ONLINE")
-        else:
-            st.warning("Backend: WAKING UP")
-    except:
-        st.error("Backend: OFFLINE")
+# --- 1. User Inputs ---
+st.subheader("1. Character Details")
+description = st.text_area(
+    "Character Description",
+    placeholder="Paste the character's persona, system prompt, or description here...",
+    height=150
+)
 
-# 4. Data Loading Logic (Member 6 Integration)
-# Loading the mock_config.json provided by Member 6
-config_path = os.path.join(os.path.dirname(__file__), '..', 'mock_config.json')
-char_config = None
-try:
-    with open(config_path, 'r') as f:
-        char_config = json.load(f)
-except:
-    pass
+st.subheader("2. Conversation History")
+st.info("Upload a CSV file containing the interaction history. It MUST have exactly two columns: `questions` (user input) and `answers` (AI response).")
+uploaded_file = st.file_uploader("Upload Conversations.csv", type=["csv"])
 
-# Loading the final scores
-report_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'reports', 'final_score.json')
-try:
-    with open(report_path, "r") as f:
-        data = json.load(f)
-except FileNotFoundError:
-    data = None
-
-# 5. UI Header
-st.title("🛡️ CharacterGuard")
-st.write("### Security & QA Dashboard")
-st.divider()
-
-if data:
-    st.write(f"### Target Character: **{data['character_name']}**")
+# --- 2. API Execution ---
+st.write("---")
+if st.button("Run Safety Evaluation", type="primary"):
     
-    # Display System Prompt from Member 6's config
-    if char_config:
-        with st.expander("📝 View Target Character System Prompt"):
-            st.code(char_config.get('system_prompt', 'No prompt defined'), language='text')
-
-    # 6. Metrics Row
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Safety Score", f"{data['overall_score']}%")
-    m2.metric("Total Tests", data['total_tests'])
-    m3.metric("Passed ✅", data['passed'])
-    m4.metric("Failed ❌", data['failed'])
-
-    st.divider()
-
-    # 7. Vulnerability Breakdown
-    st.write("### Vulnerability Breakdown")
-    c1, c2, c3 = st.columns(3)
-    scores = data['category_scores']
-    
-    with c1:
-        st.write("**Prompt Injection**")
-        st.progress(scores['prompt_injection'] / 100)
-    with c2:
-        st.write("**Persona Drift**")
-        st.progress(scores['persona_drift'] / 100)
-    with c3:
-        st.write("**Compliance**")
-        st.progress(scores['compliance_tests'] / 100)
-
-    st.divider()
-
-    # 8. Detailed Failure Table (Member 6 CSV Integration)
-    st.write("### 📜 Detailed Test Log (Raw Runs)")
-    csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw_runs', 'run_001.csv')
-    
-    try:
-        df = pd.read_csv(csv_path)
-        # Displaying the table with a clean dark theme look
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    except Exception:
-        st.info("No raw run CSV data found yet.")
-
-else:
-    st.error("⚠️ Waiting for report data...")
+    if not description:
+        st.warning("Please enter a character description.")
+    elif not uploaded_file:
+        st.warning("Please upload a conversations CSV file.")
+    else:
+        with st.spinner("Analyzing conversations against safety parameters..."):
+            
+            # Member 1's Production Endpoint
+            url = "https://charactergaurd-1.onrender.com/run/production"
+            
+            # Multipart Form-Data
+            data = {"description": description}
+            files = {"conversations": (uploaded_file.name, uploaded_file.getvalue(), "text/csv")}
+            
+            try:
+                response = requests.post(url, data=data, files=files)
+                
+                if response.status_code == 200:
+                    st.success("Analysis Complete!")
+                    results = response.json()
+                    
+                    # Display Raw JSON temporarily
+                    st.subheader("Raw Evaluation Results")
+                    st.json(results)
+                    
+                else:
+                    st.error(f"Backend Error (Status {response.status_code})")
+                    st.write(response.text)
+                    
+            except requests.exceptions.RequestException as e:
+                st.error("Failed to connect to backend. Please ensure the backend server is awake.")
