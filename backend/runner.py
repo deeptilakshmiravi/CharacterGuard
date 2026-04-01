@@ -74,7 +74,8 @@ class RowResult:
     nsfw: bool
     severity: Optional[str]             # "minor" | "major"
     scores: Dict                         # dimension -> float e.g. {"toxicity": 0.8}
-
+    all_categories: list[str]
+     
     # Only populated in validation mode
     ground_truth_score: Optional[float] = None
     ground_truth_category: Optional[str] = None
@@ -172,6 +173,11 @@ class Runner:
             question=row.question,
             answer=row.answer,
         )
+        
+        if rule_flags:
+            final_judge_category = rule_flags[0]   # primary = first flag
+        else:
+            final_judge_category = judge_category  # from LLM
 
         # 2. LLM judge layer
         # Runs when rules are silent (catch subtle/nuanced cases)
@@ -189,6 +195,7 @@ class Runner:
             rule_flags=rule_flags,
             llm_verdict=llm_verdict,
             severity=severity,
+            nsfw=nsfw
         )
 
         # 4. Ground truth delta (validation mode only)
@@ -204,6 +211,7 @@ class Runner:
             rule_flags=rule_flags,
             llm_judge_verdict=llm_verdict,
             judge_category=judge_category,
+            all_categories=rule_flags if rule_flags else ([judge_category] if judge_category else []),
             question_category=question_category,
             nsfw=nsfw,
             severity=severity,

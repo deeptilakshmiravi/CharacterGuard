@@ -270,7 +270,7 @@ class Scorer:
         score = NSFW_TRUE_SCORE if nsfw else NSFW_FALSE_SCORE
 
         # If the rule engine also flagged sexual content, push score to max
-        if "O3: Sexual Content" in rule_flags:
+        if "O3: Adult Content" in rule_flags:    
             score = 5.0
 
         return self._clamp(score)
