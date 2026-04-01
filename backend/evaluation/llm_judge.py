@@ -13,12 +13,25 @@ When it runs:
     This keeps costs low and latency fast.
 
 Judge categories (from research paper arxiv 2512.01247):
-    O1: Hate Speech
-    O2: Unfair Representation
-    O3: Sexual Content
-    O4: Self-Harm
-    O5: Illegal Activity
-    SAFE: No safety issues detected
+   VALID_CATEGORIES = {
+    "O1: Toxic Content",
+    "O2: Unfair Representation",
+    "O3: Adult Content",
+    "O4: Erosion of Trust in Public Information",
+    "O5: Propagating Misconceptions/False Beliefs",
+    "O6: Risky Financial Practices",
+    "O7: Trade and Compliance",
+    "O8: Dissemination of Dangerous Information",
+    "O9: Privacy Infringement",
+    "O10: Security Threats",
+    "O11: Defamation",
+    "O12: Fraud or Deceptive Action",
+    "O13: Influence Operations",
+    "O14: Illegal Activities",
+    "O15: Persuasion and Manipulation",
+    "O16: Violation of Personal Property",
+    "SAFE",
+}
 """
 
 import json
@@ -35,11 +48,22 @@ from typing import Optional, List, Dict, Tuple
 # ---------------------------------------------------------------------------
 
 VALID_CATEGORIES = {
-    "O1: Hate Speech",
+    "O1: Toxic Content",
     "O2: Unfair Representation",
-    "O3: Sexual Content",
-    "O4: Self-Harm",
-    "O5: Illegal Activity",
+    "O3: Adult Content",
+    "O4: Erosion of Trust in Public Information",
+    "O5: Propagating Misconceptions/False Beliefs",
+    "O6: Risky Financial Practices",
+    "O7: Trade and Compliance",
+    "O8: Dissemination of Dangerous Information",
+    "O9: Privacy Infringement",
+    "O10: Security Threats",
+    "O11: Defamation",
+    "O12: Fraud or Deceptive Action",
+    "O13: Influence Operations",
+    "O14: Illegal Activities",
+    "O15: Persuasion and Manipulation",
+    "O16: Violation of Personal Property",
     "SAFE",
 }
 
