@@ -1,85 +1,91 @@
 import streamlit as st
-import requests
 import pandas as pd
+import plotly.express as px
 
-st.set_page_config(page_title="Platform Validation", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="CharacterGuard | Research Validation", page_icon="🧪", layout="wide")
 
-st.title("⚖️ Platform Validation")
-st.markdown("Upload a ground-truth dataset to validate the CharacterGuard scoring engine.")
+st.title("🧪 Research Validation & Model Accuracy")
+st.markdown("This dashboard evaluates the alignment between **Human Ground Truth** and **Gemini Flash 3 Judge**.")
 
 # --- 1. File Upload ---
-st.info("Upload a CSV dataset containing: `description`, `question`, `answer`, `judge_score`, `judge_category`, `NSFW`.")
-uploaded_file = st.file_uploader("Upload Validation Dataset (CSV)", type=["csv"])
+st.sidebar.header("Upload Results")
+uploaded_file = st.sidebar.file_uploader("Upload the final_graded_results.csv", type=["csv"])
 
-if st.button("Run Validation", type="primary"):
-    if not uploaded_file:
-        st.warning("Please upload a CSV dataset to begin validation.")
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    
+    # Ensure necessary columns exist
+    if 'judge_score' in df.columns and 'ai_score' in df.columns:
+        
+        # --- 2. Calculation Logic ---
+        # Calculate Accuracy (Exact match between human and AI)
+        df['is_aligned'] = (df['judge_score'] == df['ai_score'])
+        accuracy = (df['is_aligned'].sum() / len(df)) * 100
+        
+        # --- 3. Top Level Metrics ---
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Rows Evaluated", len(df))
+        col2.metric("Exact Match Accuracy", f"{accuracy:.1f}%")
+        col3.metric("Dataset Source", "Zenodo / arXiv:2512.01247")
+        
+        st.divider()
+        
+        # --- 4. Visualization Sections ---
+        left_chart, right_chart = st.columns(2)
+        
+        with left_chart:
+            st.subheader("📊 Category Distribution")
+            # Showing the count of different types of violations found
+            if 'judge_category' in df.columns:
+                cat_counts = df['judge_category'].value_counts().reset_index()
+                cat_counts.columns = ['Category', 'Count']
+                fig_bar = px.bar(cat_counts, x='Count', y='Category', orientation='h', 
+                                 color='Count', color_continuous_scale='Reds',
+                                 title="Frequency of Safety Violations (Human Labeled)")
+                st.plotly_chart(fig_bar, use_container_width=True)
+            else:
+                st.warning("Column 'judge_category' not found for distribution chart.")
+            
+        with right_chart:
+            st.subheader("🎯 AI vs. Human Alignment")
+            # Scatter plot to see where the AI and Human disagree
+            fig_scatter = px.scatter(df, x='judge_score', y='ai_score', 
+                                     color='is_aligned', 
+                                     color_discrete_map={True: "#28a745", False: "#dc3545"},
+                                     labels={'judge_score': 'Human Score', 'ai_score': 'AI Score'},
+                                     title="Comparison: Human Ground Truth vs. AI Judgment",
+                                     opacity=0.7) # Slightly higher opacity for visibility
+            
+            # Force axes to be 1-5 range for clarity
+            fig_scatter.update_layout(xaxis=dict(range=[0, 6]), yaxis=dict(range=[0, 6]))
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+        st.divider()
+        
+        # --- 5. The Error Analysis Table ---
+        st.subheader("🧐 Deep-Dive: Disagreement Examples")
+        st.markdown("These are rows where the AI score differed from the human score.")
+        
+        # Filter for rows where they disagreed
+        disagreements = df[df['judge_score'] != df['ai_score']]
+        
+        if not disagreements.empty:
+            # Display relevant columns if they exist
+            display_cols = [col for col in ['description', 'question', 'answer', 'judge_score', 'ai_score'] if col in df.columns]
+            st.dataframe(disagreements[display_cols].head(10), use_container_width=True)
+        else:
+            st.success("Perfect alignment! No disagreements found in this dataset.")
+
     else:
-        with st.spinner("Validating against ground truth..."):
-            
-            # Esther's Validation Endpoint
-            url = "https://charactergaurd-1.onrender.com/run/validation"
-            
-            # Esther requested the field be named exactly "dataset"
-            files = {"dataset": (uploaded_file.name, uploaded_file.getvalue(), "text/csv")}
-            
-            try:
-                response = requests.post(url, files=files)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    st.success("Validation Complete!")
-                    
-                    # --- 2. Top-Level Metrics ---
-                    st.subheader("📊 Validation Metrics")
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    agreement_rate = data.get('ground_truth_agreement_rate', 0) * 100
-                    match_rate = data.get('category_match_rate', 0) * 100
-                    
-                    col1.metric("Ground Truth Agreement", f"{agreement_rate:.1f}%")
-                    col2.metric("Category Match Rate", f"{match_rate:.1f}%")
-                    col3.metric("Total Rows Evaluated", data.get('total_rows', 0))
-                    col4.metric("Unsafe Count", data.get('unsafe_count', 0))
-                    
-                    st.divider()
-                    
-                    # --- 3. Per-Row Breakdown Table ---
-                    st.subheader("Detailed Row Comparison")
-                    
-                    if "row_results" in data:
-                        rows = data["row_results"]
-                        table_data = []
-                        for row in rows:
-                            cat_match = "✅" if row.get('ground_truth_category') in row.get('all_categories', []) else "⚠️"
-                            
-                            table_data.append({
-                                "Question": row.get("question", "")[:50] + "...",
-                                "Our Score": row.get("scores", {}).get("overall"),
-                                "Ground Truth": row.get("ground_truth_score"),
-                                "Score Delta": row.get("score_delta"),
-                                "Our Categories": ", ".join(row.get("all_categories", [])),
-                                "True Category": row.get("ground_truth_category"),
-                                "Match": cat_match
-                            })
-                            
-                        df = pd.DataFrame(table_data)
-                        
-                        # Style the dataframe to highlight delta
-                        st.dataframe(
-                            df.style.map(
-                                lambda val: 'color: red' if isinstance(val, (int, float)) and val < 0 else ('color: green' if isinstance(val, (int, float)) and val > 0 else ''), 
-                                subset=['Score Delta']
-                            ),
-                            use_container_width=True,
-                            hide_index=True
-                        )
-                    else:
-                        st.write("No row-level data returned.")
-                        
-                else:
-                    st.error(f"Backend Error: {response.status_code}")
-                    st.write(response.text)
-                    
-            except requests.exceptions.RequestException as e:
-                st.error(f"Failed to connect: {e}")
+        st.error("The uploaded CSV is missing 'judge_score' or 'ai_score' columns. Please ensure Member 1 has processed the data correctly.")
+        
+else:
+    # --- Empty State ---
+    st.info("Waiting for data. Please upload the evaluated dataset after it has been processed by the Gemini Backend.")
+    
+    st.markdown("""
+    ### How to prepare this data:
+    1. Run the `validation_sample.csv` through the offline script.
+    2. Ensure the final CSV has the columns: `question`, `answer`, `judge_score` (human truth), and `ai_score` (model output).
+    3. Upload that finished file here to generate the accuracy charts.
+    """)
