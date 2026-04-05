@@ -12,7 +12,6 @@ All of that lives in llm_judge.py.
 """
 
 import json
-#import logging
 import os
 import time
 from typing import Optional
@@ -22,32 +21,38 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
-DEFAULT_MAX_TOKENS = 512      # Judge responses are short — no need for more
-DEFAULT_TEMPERATURE = 0.0     # Zero temperature = deterministic, consistent verdicts
-DEFAULT_TIMEOUT = 30          # Seconds before giving up on a request
-MAX_RETRIES = 3               # Retry on transient failures (rate limits, timeouts)
-RETRY_DELAY = 2               # Seconds to wait between retries
+# picked a few free models in case 1 failed
+MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-3-4b-it:free",
+    "openrouter/free",
+]
+
+# Judge responses are short, no need for more
+DEFAULT_MAX_TOKENS = 512      
+# Zero temperature = deterministic, consistent verdicts
+DEFAULT_TEMPERATURE = 0.0    
+# Seconds before giving up on a request 
+DEFAULT_TIMEOUT = 30       
+# Retry on transient failures (rate limits, timeouts)   
+MAX_RETRIES = 3     
+# Seconds to wait between retries          
+RETRY_DELAY = 2               
 
 
-# ---------------------------------------------------------------------------
-# OpenRouterClient
-# ---------------------------------------------------------------------------
+# AiClient
 
 class AiClient:
     """
     Sends a message to OpenRouter and returns the raw text response.
+    Falls back through MODELS list if a model is rate limited.
 
     Usage:
-        client = OpenRouterClient()
+        client = AiClient()
         response = client.call(
             system_prompt="You are a strict safety evaluator...",
             user_message="CHARACTER DESCRIPTION: ..."
@@ -75,7 +80,8 @@ class AiClient:
 
     def call(self, system_prompt: str, user_message: str) -> str:
         """
-        Send a system prompt + user message to OpenRouter
+        Send a system prompt + user message to OpenRouter.
+        Tries each model in MODELS in order, falling back on rate limits.
 
         Args:
             system_prompt : Instructions that control the model's behaviour (the judge rules)
@@ -85,9 +91,29 @@ class AiClient:
             Raw text string from the model. Parsing is llm_judge.py's responsibility.
 
         Raises:
-            RuntimeError if all retries are exhausted.
+            RuntimeError if all models and retries are exhausted.
         """
-        payload = self._build_payload(system_prompt, user_message)
+        last_error = None
+
+        for model in MODELS:
+            result = self._try_model(model, system_prompt, user_message)
+            if result is not None:
+                return result
+            print(f"Model {model} unavailable, trying next fallback...")
+
+        raise RuntimeError(
+            f"All models exhausted after retries. Last error: {last_error}\n"
+            "Check your API key, network connection, and rate limits."
+        )
+
+    # Private helpers
+
+    def _try_model(self, model: str, system_prompt: str, user_message: str) -> Optional[str]:
+        """
+        Attempt to call a specific model with retries.
+        Returns the response text on success, or None if rate limited / failed.
+        """
+        payload = self._build_payload(model, system_prompt, user_message)
         headers = {
             "Authorization": "Bearer " + self.api_key,
             "Content-Type": "application/json",
@@ -95,8 +121,6 @@ class AiClient:
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                #logger.debug(f"OpenRouter API call attempt {attempt}/{MAX_RETRIES}")
-
                 response = requests.post(
                     url=OPENROUTER_URL,
                     headers=headers,
@@ -104,51 +128,32 @@ class AiClient:
                     timeout=self.timeout,
                 )
                 response.raise_for_status()
-
                 return self._extract_text(response.json())
 
             except requests.exceptions.Timeout:
-                #logger.warning(f"OpenRouter request timed out (attempt {attempt})")
-                print("timed out")
+                print(f"[{model}] Timed out (attempt {attempt})")
 
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code
                 if status == 429:
-                    # Rate limited, wait longer before retrying
-                    #logger.warning(f"Rate limited by OpenRouter (attempt {attempt}). Waiting...")
+                    # Rate limited, if we're on last retry, fall back to next model
+                    if attempt == MAX_RETRIES:
+                        print(f"[{model}] Rate limited on all retries, falling back.")
+                        return None
+                    print(f"[{model}] Rate limited (attempt {attempt}), waiting...")
                     time.sleep(RETRY_DELAY * attempt)
                     continue
-                #elif status == 400:
-                    # Bad request , retrying won't help
-                    #logger.error(f"OpenRouter rejected the request (400): {e.response.text}")
-                    #raise
-                #else:
-                    #logger.warning(f"OpenRouter HTTP error {status} (attempt {attempt}): {e}")
-
-            #except requests.exceptions.RequestException as e:
-                #logger.warning(f"OpenRouter request failed (attempt {attempt}): {e}")
+                else:
+                    print(f"[{model}] HTTP error {status} (attempt {attempt})")
 
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY)
+         # All retries failed for this model
+        return None 
 
-        raise RuntimeError(
-            f"OpenRouter API call failed after {MAX_RETRIES} attempts. "
-            "Check your API key, network connection, and rate limits."
-        )
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    def _build_payload(self, system_prompt: str, user_message: str) -> dict:
-        """
-        Build the OpenRouter request body.
-
-        The system prompt goes in as a "system" role message, which is the
-        standard OpenAI-compatible format that OpenRouter follows.
-        """
+    def _build_payload(self, model: str, system_prompt: str, user_message: str) -> dict:
         return {
-            "model": MODEL,
+            "model": model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "messages": [
@@ -169,22 +174,7 @@ class AiClient:
         }
 
     def _extract_text(self, response_json: dict) -> str:
-        """
-        Pull the text content out of OpenRouter's response structure.
-
-        OpenRouter follows the OpenAI response format:
-        {
-            "choices": [
-                {
-                    "message": {
-                        "content": "..."
-                    }
-                }
-            ]
-        }
-        """
         try:
             return response_json["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
-            #logger.error(f"Unexpected OpenRouter response structure: {response_json}")
             raise RuntimeError(f"Could not extract text from OpenRouter response: {e}")
