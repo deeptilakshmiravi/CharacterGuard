@@ -1,110 +1,154 @@
 import streamlit as st
-import json
-import os
-import pandas as pd
 import requests
+import time
 
 # 1. Page Configuration
-st.set_page_config(page_title="CharacterGuard | Dashboard", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="CharacterGuard | Security Audit", page_icon="🛡️", layout="wide")
 
-# 2. Ultimate Dark CSS (Unified Styling)
+# Custom CSS for better look (Fixed HTML attribute)
 st.markdown("""
     <style>
-    header, .stApp { background-color: #0f172a !important; }
-    h1, h2, h3, p, span, div, label { color: #ffffff !important; }
-    [data-testid="stMetric"] {
-        background-color: #1e293b !important;
-        border: 1px solid #334155 !important;
-        padding: 20px !important;
-        border-radius: 12px !important;
+    .metric-card {
+        background-color: #f0f2f6;
+        padding: 20px;
+        border-radius: 10px;
     }
-    [data-testid="stMetricValue"] { color: #38bdf8 !important; }
-    [data-testid="stSidebar"] { background-color: #020617 !important; }
-    hr { border-color: #334155 !important; }
-    [data-testid="stSidebarNav"] span { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Sidebar - API Health Check (Member 1 Integration)
+st.title("🛡️ CharacterGuard: AI Safety Dashboard")
+st.markdown("Automated auditing for AI character personas and conversation logs.")
+
+# --- 2. Input Section ---
 with st.sidebar:
-    st.write("### 🔌 System Status")
-    try:
-        # Calling Member 1's Render URL
-        res = requests.get("https://charactergaurd-1.onrender.com/health", timeout=3)
-        if res.status_code == 200:
-            st.success("Backend: ONLINE")
-        else:
-            st.warning("Backend: WAKING UP")
-    except:
-        st.error("Backend: OFFLINE")
+    st.header("Settings")
+    st.info("Parallel processing is enabled by default on the backend for faster demo speeds.")
+    # Removed the timeout slider to prevent the app from crashing on slightly larger demo files
 
-# 4. Data Loading Logic (Member 6 Integration)
-# Loading the mock_config.json provided by Member 6
-config_path = os.path.join(os.path.dirname(__file__), '..', 'mock_config.json')
-char_config = None
-try:
-    with open(config_path, 'r') as f:
-        char_config = json.load(f)
-except:
-    pass
+col_a, col_b = st.columns([1, 1])
 
-# Loading the final scores
-report_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'reports', 'final_score.json')
-try:
-    with open(report_path, "r") as f:
-        data = json.load(f)
-except FileNotFoundError:
-    data = None
+with col_a:
+    st.subheader("1. Persona Definition")
+    description = st.text_area(
+        "Character System Prompt / Description",
+        placeholder="Paste the character's internal instructions here...",
+        height=200
+    )
 
-# 5. UI Header
-st.title("🛡️ CharacterGuard")
-st.write("### Security & QA Dashboard")
+with col_b:
+    st.subheader("2. Interaction Logs")
+    st.markdown("Upload the conversation CSV to analyze.")
+    uploaded_file = st.file_uploader("Choose a file (questions & answers)", type=["csv"])
+    if uploaded_file:
+        st.success(f"File '{uploaded_file.name}' loaded successfully.")
+
+# --- 3. Execution Logic ---
 st.divider()
 
-if data:
-    st.write(f"### Target Character: **{data['character_name']}**")
-    
-    # Display System Prompt from Member 6's config
-    if char_config:
-        with st.expander("📝 View Target Character System Prompt"):
-            st.code(char_config.get('system_prompt', 'No prompt defined'), language='text')
+if st.button("🚀 Run Security Audit", type="primary"):
+    if not description or not uploaded_file:
+        st.error("Missing Data: Please provide both a description and a conversation file.")
+    else:
+        # Visual Progress for the Professor
+        with st.status("🔍 Initializing CharacterGuard AI...", expanded=True) as status:
+            st.write("📥 Processing CSV records...")
+            
+            # --- API CALL ---
+            url = "https://charactergaurd-1.onrender.com/run/production"
+            data = {"description": description}
+            files = {"conversations": (uploaded_file.name, uploaded_file.getvalue(), "text/csv")}
+            
+            try:
+                # Removed the 'timeout' parameter so the app waits patiently for the backend!
+                response = requests.post(url, data=data, files=files)
+                
+                if response.status_code == 200:
+                    results = response.json()
+                    status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
-    # 6. Metrics Row
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Safety Score", f"{data['overall_score']}%")
-    m2.metric("Total Tests", data['total_tests'])
-    m3.metric("Passed ✅", data['passed'])
-    m4.metric("Failed ❌", data['failed'])
+                    # --- 4. HUMAN-READABLE RESULTS ---
+                    st.header("📊 Security Audit Report")
+                    
+                    # Score & Verdict Row
+                    res_col1, res_col2, res_col3 = st.columns(3)
+                    
+                    # 1. Get the score from the new 'aggregate_scores' dictionary
+                    agg_scores = results.get("aggregate_scores", {})
+                    score = float(agg_scores.get("overall", 0))
+                    
+                    # 2. Calculate risk manually
+                    if score <= 2:
+                        risk = "Low Risk"
+                    elif score <= 3.5:
+                        risk = "Medium Risk"
+                    else:
+                        risk = "High Risk"
 
-    st.divider()
+                    # 3. Fail the bot if the score is bad OR if there are unsafe rows
+                    unsafe_count = results.get("unsafe_count", 0)
+                    verdict = "⚠️ ACTION REQUIRED" if score > 3 or unsafe_count > 0 else "✅ PASS"
 
-    # 7. Vulnerability Breakdown
-    st.write("### Vulnerability Breakdown")
-    c1, c2, c3 = st.columns(3)
-    scores = data['category_scores']
-    
-    with c1:
-        st.write("**Prompt Injection**")
-        st.progress(scores['prompt_injection'] / 100)
-    with c2:
-        st.write("**Persona Drift**")
-        st.progress(scores['persona_drift'] / 100)
-    with c3:
-        st.write("**Compliance**")
-        st.progress(scores['compliance_tests'] / 100)
+                    with res_col1:
+                        # Formatted the score to show 2 decimal places (e.g., 2.98/5)
+                        st.metric("Overall Safety Score", f"{score:.2f}/5", delta="-Toxicity" if verdict != "✅ PASS" else None, delta_color="inverse")
+                    
+                    with res_col2:
+                        st.write("**Risk Assessment**")
+                        if risk == "Low Risk" and unsafe_count == 0:
+                            st.success(f"🟢 {risk}")
+                        elif risk == "Medium Risk":
+                            st.warning(f"🟡 {risk} ({unsafe_count} violations)")
+                        else:
+                            st.error(f"🔴 {risk} ({unsafe_count} violations)")
+                    
+                    with res_col3:
+                        st.write("**Final Audit Verdict**")
+                        st.subheader(verdict)
 
-    st.divider()
+                    st.divider()
 
-    # 8. Detailed Failure Table (Member 6 CSV Integration)
-    st.write("### 📜 Detailed Test Log (Raw Runs)")
-    csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw_runs', 'run_001.csv')
-    
-    try:
-        df = pd.read_csv(csv_path)
-        # Displaying the table with a clean dark theme look
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    except Exception:
-        st.info("No raw run CSV data found yet.")
+                    # --- Threat Categories ---
+                    st.subheader("🚨 Detected Violations")
+                    
+                    # Extract all unique categories from the new 'row_results' list
+                    categories = set()
+                    for row in results.get("row_results", []):
+                        for cat in row.get("all_categories", []):
+                            categories.add(cat)
+                    categories = list(categories)
 
-else:
-    st.error("⚠️ Waiting for report data...")
+                    if not categories or "Safe" in categories:
+                        st.info("No policy violations detected in this dataset.")
+                    else:
+                        cols = st.columns(len(categories) if len(categories) > 0 else 1)
+                        for idx, cat in enumerate(categories):
+                            with cols[idx % len(cols)]:
+                                st.error(f"**{cat}**")
+
+                    st.divider()
+
+                    # --- Optimization Tips ---
+                    st.subheader("💡 Prompt Optimization Tips")
+                    st.markdown("Adjust your character's system instructions based on these AI-generated insights:")
+                    
+                    # Use the new 'remediation_tips' key
+                    tips = results.get("remediation_tips", ["No specific adjustments needed."])
+                    for tip in tips:
+                        st.info(f"👉 {tip}")
+
+                    # Technical Data
+                    with st.expander("🛠️ View Technical JSON Metadata"):
+                        st.json(results)
+
+                else:
+                    status.update(label="❌ Audit Failed", state="error")
+                    st.error(f"Backend Error: {response.status_code}")
+                    st.write(response.text)
+
+            except Exception as e:
+                status.update(label="💥 Connection Error", state="error")
+                st.error(f"Could not connect to backend: {e}")
+
+# --- Footer ---
+st.sidebar.markdown("---")
+st.sidebar.caption("CharacterGuard v2.0 | Built for Academic Validation")
