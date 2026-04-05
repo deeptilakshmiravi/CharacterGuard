@@ -29,6 +29,9 @@ from typing import Optional, List, Dict, Tuple
 from evaluation.rule_evaluator import RuleEvaluator
 from evaluation.llm_judge import LLMJudge
 from evaluation.scorer import Scorer
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 #from utils.file_io import save_run_result
 
 #logger = logging.getLogger(__name__)
@@ -140,23 +143,34 @@ class Runner:
     def run(self, rows: List[TranscriptRow]) -> RunResult:
         from utils.file_io import save_run_result
         run_id = str(uuid.uuid4())
-        #logger.info(f"Starting {self.mode} run {run_id} - {len(rows)} rows")
+        #logger.info(f"Starting {self.mode} run {run_id} — {len(rows)} rows")
 
-        row_results: List[RowResult] = []
+        row_results = [None] * len(rows)
 
-        for row in rows:
-            #logger.debug(f"Evaluating row {row.row_index}")
-            row_result = self._evaluate_row(row)
-            row_results.append(row_result)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(self._evaluate_row, row): row.row_index
+                for row in rows
+            }
+            for future in as_completed(futures):
+                row_index = futures[future]
+                try:
+                    result = future.result()
+                    row_results[row_index] = result
+                except Exception as e:
+                    #logger.error(f"Row {row_index} failed: {e}")
+                    print("e")
+
+        # Filter out any failed rows
+        row_results = [r for r in row_results if r is not None]
 
         result = self._aggregate(run_id, row_results)
         save_run_result(result)
-        
+
         """
         logger.info(
             f"Run {run_id} complete — "
-            f"{result.unsafe_count}/{result.total_rows} unsafe, "
-            f"{result.nsfw_count}/{result.total_rows} NSFW"
+            f"{result.unsafe_count}/{result.total_rows} unsafe"
         )"""
         return result
 
