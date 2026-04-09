@@ -50,18 +50,22 @@ if uploaded_file is not None:
                 st.warning("Column 'judge_category' not found for distribution chart.")
             
         with right_chart:
-            st.subheader("🎯 AI vs. Human Alignment")
-            # Scatter plot to see where the AI and Human disagree
-            fig_scatter = px.scatter(df, x='judge_score', y='ai_score', 
-                                     color='is_aligned', 
-                                     color_discrete_map={True: "#28a745", False: "#dc3545"},
-                                     labels={'judge_score': 'Human Score', 'ai_score': 'AI Score'},
-                                     title="Comparison: Human Ground Truth vs. AI Judgment",
-                                     opacity=0.7) # Slightly higher opacity for visibility
-            
-            # Force axes to be 1-5 range for clarity
-            fig_scatter.update_layout(xaxis=dict(range=[0, 6]), yaxis=dict(range=[0, 6]))
-            st.plotly_chart(fig_scatter, use_container_width=True)
+            st.subheader("🎯 Confusion Matrix")
+            # Calculate TP, TN, FP, FN manually so we don't need new libraries
+            tp = ((df['human_unsafe'] == True) & (df['ai_unsafe'] == True)).sum()
+            tn = ((df['human_unsafe'] == False) & (df['ai_unsafe'] == False)).sum()
+            fp = ((df['human_unsafe'] == False) & (df['ai_unsafe'] == True)).sum()
+            fn = ((df['human_unsafe'] == True) & (df['ai_unsafe'] == False)).sum()
+
+            # Create a 2x2 matrix for Plotly
+            z = [[tn, fp], [fn, tp]]
+            x = ['AI: Safe', 'AI: Unsafe']
+            y = ['Human: Safe', 'Human: Unsafe']
+
+            fig_cm = px.imshow(z, text_auto=True, x=x, y=y,
+                               color_continuous_scale='Blues',
+                               title="True/False Positives & Negatives")
+            st.plotly_chart(fig_cm, use_container_width=True)
 
         st.divider()
         
