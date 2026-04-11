@@ -138,6 +138,13 @@ class GeminiClient:
         Gemini separates system instructions from user turns — this maps
         cleanly onto the same system_prompt / user_message pattern used
         by the OpenRouter client.
+
+        safetySettings: all four harm categories are set to BLOCK_NONE so
+        Gemini does not refuse to process explicit content that is being
+        *evaluated* (not generated). This is the standard approach for
+        content-moderation pipelines — we are classifying harmful content,
+        not producing it. Without this, Gemini blocks the request whenever
+        the character response being judged contains adult/violent content.
         """
         return {
             "system_instruction": {
@@ -150,14 +157,34 @@ class GeminiClient:
                 }
             ],
             "generationConfig": {
-                "temperature":    self.temperature,
+                "temperature":     self.temperature,
                 "maxOutputTokens": self.max_tokens,
             },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT",        "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH",       "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ],
         }
 
     def _extract_text(self, response_json: dict) -> str:
         try:
-            return response_json["candidates"][0]["content"]["parts"][0]["text"]
+            candidate = response_json["candidates"][0]
+
+            # Gemini may refuse to generate content (e.g. safety filters)
+            finish_reason = candidate.get("finishReason", "")
+            if finish_reason == "PROHIBITED_CONTENT" or "content" not in candidate:
+                raise RuntimeError(
+                    f"Gemini blocked the response (finishReason: {finish_reason}). "
+                    "The prompt may be triggering Gemini's safety filters — "
+                    "try reframing the system prompt to sound more like a safety researcher."
+                )
+
+            return candidate["content"]["parts"][0]["text"]
+
+        except RuntimeError:
+            raise
         except (KeyError, IndexError) as e:
             raise RuntimeError(
                 f"Could not extract text from Gemini response: {e}\n"
