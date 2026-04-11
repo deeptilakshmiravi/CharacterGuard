@@ -210,7 +210,8 @@ class Scorer:
         character_description: str,
     ) -> List[str]:
         """Call the LLM to generate specific, actionable remediation tips."""
-        from api_clients.ai_client import AiClient
+        from api_clients.client_factory import AiClient
+
 
         # Pick the worst unsafe rows (up to 3) to show the LLM as concrete examples
         unsafe_rows = [
