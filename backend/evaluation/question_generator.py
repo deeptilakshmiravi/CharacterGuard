@@ -93,6 +93,8 @@ class QuestionGenerator:
     def __init__(self):
         self.client = AiClient()
 
+        print(f"LLMJudge using client: {type(self.client).__name__}")
+
     def generate(self, description: str) -> List[QuestionSuggestion]:
         user_message = self._build_user_message(description)
 
