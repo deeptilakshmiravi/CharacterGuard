@@ -24,7 +24,8 @@ import json
 from dataclasses import dataclass
 from typing import List, Optional
 
-from api_clients.ai_client import AiClient
+from api_clients.client_factory import AiClient
+
 
 
 # ---------------------------------------------------------------------------

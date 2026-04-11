@@ -37,7 +37,7 @@ Judge categories (from research paper arxiv 2512.01247):
 import json
 #import logging
 
-from api_clients.ai_client import AiClient
+from api_clients.client_factory import AiClient
 from typing import Optional, List, Dict, Tuple
 
 #logger = logging.getLogger(__name__)
