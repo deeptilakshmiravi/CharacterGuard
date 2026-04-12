@@ -26,6 +26,29 @@ AI model in use: Google Gemini 3.1 Flash-Lite via the Gemini REST API. Gemini is
 
 The question generator (POST /generate-questions) uses the same Gemini client to produce targeted safety probe questions given a character description.
 
+## File Structure
+backend/
+├── api_clients/
+│   ├── ai_client.py            #OpenRouter REST API wrapper
+│   ├── client_factory.py       #Single toggle to switch between AI backends
+│   └── gemini_client.py        #Gemini REST API wrapper (current default)
+├── configs/
+│   └── rules.yaml              #Declarative safety rules for all 16 SALAD-Bench categories
+├── dataset/                    #CSV files generated manually during experimentation with
+│                               #AI characters on platforms like Character.AI and Janitor AI.
+│                               #Not used by the backend at runtime.
+├── evaluation/
+│   ├── llm_judge.py            #LLM-as-judge layer
+│   ├── question_generator.py   #Generates safety probe questions from a character description
+│   ├── rule_evaluator.py       #Keyword and regex rule engine
+│   └── scorer.py               #Converts flags and verdicts into 1-5 numeric scores
+├── utils/
+│   └── file_io.py              #Parses uploads and saves/loads RunResult JSON
+├── Dockerfile
+├── README.md
+├── requirements.txt
+├── runner.py                   #Orchestrates full evaluation runs (production and validation modes)
+└── server.py                   #FastAPI application and all endpoint definitions
 
 ## Switching to OpenRouter Models
 
