@@ -145,7 +145,7 @@ elif st.session_state.current_step == 3:
                 st.write("🧹 Sanitizing CSV data...")
                 clean_csv_string, clean_rows = sanitizer.sanitize_csv(uploaded_file)
                 
-                st.write("📥 Processing records through Gemini API...")
+                st.write("📥 Processing records through API...")
                 url = "https://charactergaurd-1.onrender.com/run/production"
                 data = {"description": st.session_state.description}
                 files = {"conversations": (uploaded_file.name, clean_csv_string, "text/csv")}
