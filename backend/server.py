@@ -12,21 +12,6 @@ from runner import Runner, RunResult
 from evaluation.question_generator import QuestionGenerator
 
 
-# import logging
-
-# Import routers
-# from backend.routes import run_tests, results, comparison
-
-# --------------------------------------------------
-# Logging setup
-# --------------------------------------------------
-# logging.basicConfig(
-    # level=logging.INFO,
-    # format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-# )
-# logger = logging.getLogger(__name__)
-
-
 app = FastAPI(
     title="CharacterGuard API",
     description="API for testing and evaluating AI character robustness",
@@ -36,7 +21,6 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    # change this to production url later
     allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
@@ -51,9 +35,7 @@ def root():
         "version": "1.0.0"
     }
 
-# ---------------------------------------------------------------------------
 # POST /run/production
-# ---------------------------------------------------------------------------
  
 @app.post("/run/production")
 async def run_production(
@@ -70,9 +52,7 @@ async def run_production(
     Returns:
         Full RunResult as JSON
     """
-    #logger.info("Received production run request")
  
-    # Validate file type
     if not conversations.filename.endswith(".csv"):
         raise HTTPException(
             status_code=400,
@@ -80,7 +60,6 @@ async def run_production(
         )
  
     try:
-        # Parse upload into TranscriptRows
         rows = parse_upload(
             description=description,
             csv_file=conversations.file,
@@ -99,15 +78,12 @@ async def run_production(
         runner = Runner(mode="production")
         result: RunResult = runner.run(rows)
     except Exception as e:
-        #logger.error(f"Production run failed: {e}")
         raise HTTPException(status_code=500, detail=f"Run failed: {str(e)}")
  
     return _run_result_to_dict(result)
  
  
-# ---------------------------------------------------------------------------
 # POST /run/validation
-# ---------------------------------------------------------------------------
  
 @app.post("/run/validation")
 async def run_validation(
@@ -127,7 +103,6 @@ async def run_validation(
         Full RunResult as JSON, including ground truth comparison metrics
         (ground_truth_agreement_rate, category_match_rate)
     """
-    #logger.info("Received validation run request")
  
     if not dataset.filename.endswith(".csv"):
         raise HTTPException(
@@ -151,7 +126,6 @@ async def run_validation(
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     finally:
-        # Always clean up the temp file
         if tmp_path.exists():
             tmp_path.unlink()
  
@@ -167,64 +141,13 @@ async def run_validation(
         runner = Runner(mode="validation")
         result: RunResult = runner.run(rows)
     except Exception as e:
-        #logger.error(f"Validation run failed: {e}")
         raise HTTPException(status_code=500, detail=f"Run failed: {str(e)}")
  
     return _run_result_to_dict(result)
  
  
-# ---------------------------------------------------------------------------
-# GET /run/{run_id}
-# ---------------------------------------------------------------------------
- 
-# @app.get("/run/{run_id}")
-# async def get_run(run_id: str):
-    # """
-    # Fetch a previously saved run result by run ID.
- 
-    # Args:
-        # run_id : full run UUID or first 8 characters
- 
-    # Returns:
-        # RunResult as JSON, or 404 if not found
-    # """
-    # logger.info(f"Fetching run: {run_id}")
- 
-    # result = load_run_result(run_id)
-    # if result is None:
-        # raise HTTPException(
-            # status_code=404,
-            # detail=f"No run found with ID '{run_id}'. "
-                   # "Check the run ID or use GET /runs to list all saved runs."
-        # )
- 
-    # return _run_result_to_dict(result)
- 
- 
-# ---------------------------------------------------------------------------
-# GET /runs
-# ---------------------------------------------------------------------------
 
-
-# @app.get("/runs")
-# async def get_all_runs():
-    # """
-    # List all saved runs in data/raw_runs/.
- 
-    # Returns:
-        # List of run summaries (run_id, mode, total_rows, unsafe_count, timestamp)
-        # sorted by most recent first
-    # """
-    # logger.info("Listing all saved runs")
- 
-    # summaries = list_saved_runs()
-    # return {"runs": summaries, "total": len(summaries)}
- 
-
-
-# ---------------------------------------------------------------------------
 # Health check
-# ---------------------------------------------------------------------------
  
 @app.get("/health")
 async def health():
@@ -232,9 +155,7 @@ async def health():
     return {"status": "ok", "service": "CharacterGuard API"}
     
     
-# ---------------------------------------------------------------------------
 # POST /generate-questions
-# ---------------------------------------------------------------------------
  
 class GenerateQuestionsRequest(BaseModel):
     description: str

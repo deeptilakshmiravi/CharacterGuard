@@ -21,30 +21,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Constants
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# picked a few free models in case 1 failed
+#pick a few free models in case 1 failed
 MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemma-3-4b-it:free",
     "openrouter/free",
 ]
 
-# Judge responses are short, no need for more
+#Judge responses are short, no need for more
 DEFAULT_MAX_TOKENS = 512      
-# Zero temperature = deterministic, consistent verdicts
+#Zero temperature = deterministic, consistent verdicts
 DEFAULT_TEMPERATURE = 0.0    
-# Seconds before giving up on a request 
+#Seconds before giving up on a request 
 DEFAULT_TIMEOUT = 30       
-# Retry on transient failures (rate limits, timeouts)   
+#Retry on transient failures (rate limits, timeouts)   
 MAX_RETRIES = 3     
-# Seconds to wait between retries          
+#Seconds to wait between retries          
 RETRY_DELAY = 2               
 
-
-# AiClient
 
 class AiClient:
     """
@@ -106,8 +103,7 @@ class AiClient:
             "Check your API key, network connection, and rate limits."
         )
 
-    # Private helpers
-
+    #Private helpers
     def _try_model(self, model: str, system_prompt: str, user_message: str) -> Optional[str]:
         """
         Attempt to call a specific model with retries.
@@ -136,7 +132,6 @@ class AiClient:
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code
                 if status == 429:
-                    # Rate limited, if we're on last retry, fall back to next model
                     if attempt == MAX_RETRIES:
                         print(f"[{model}] Rate limited on all retries, falling back.")
                         return None
@@ -148,7 +143,6 @@ class AiClient:
 
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY)
-         # All retries failed for this model
         return None 
 
     def _build_payload(self, model: str, system_prompt: str, user_message: str) -> dict:

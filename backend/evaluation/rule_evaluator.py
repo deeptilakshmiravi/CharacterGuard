@@ -1,5 +1,4 @@
 """
-rule_evaluator.py
 A declarative rule engine for detecting obvious safety violations.
 """
 
@@ -12,13 +11,7 @@ import yaml
 DEFAULT_RULES_PATH = Path(__file__).parent.parent / "configs" / "rules.yaml"
 
 
-# ---------------------------------------------------------------------------
-# Rule dataclass
-# ---------------------------------------------------------------------------
-
 class Rule:
-    """A single safety rule loaded from the rules file."""
-
     def __init__(self, id: str, category: str, field: str, type: str, patterns: List[str]):
         self.id = id
         self.category = category
@@ -32,9 +25,6 @@ class Rule:
         )
 
 
-# ---------------------------------------------------------------------------
-# RuleEngine
-# ---------------------------------------------------------------------------
 
 class RuleEngine:
     def evaluate(self, rules: List[Rule], facts: Dict[str, str]) -> List[str]:
@@ -66,10 +56,6 @@ class RuleEngine:
         else:
             return False
 
-
-# ---------------------------------------------------------------------------
-# RuleEvaluator
-# ---------------------------------------------------------------------------
 
 class RuleEvaluator:
     def __init__(self, rules_path: Optional[Path] = None):

@@ -29,19 +29,10 @@ import pandas as pd
 
 from runner import TranscriptRow, RunResult, RowResult
 
-#logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
 
 RAW_RUNS_DIR = Path("data/raw_runs")
 RAW_RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
-
-# ---------------------------------------------------------------------------
-# Production mode — parse user upload
-# ---------------------------------------------------------------------------
 
 def parse_upload(description: str, csv_file) -> List[TranscriptRow]:
     """
@@ -73,7 +64,6 @@ def parse_upload(description: str, csv_file) -> List[TranscriptRow]:
             answer = str(row["answer"]).strip()
 
             if not question or not answer:
-                #logger.warning(f"Skipping row {i} — empty question or answer")
                 continue
 
             rows.append(TranscriptRow(
@@ -81,23 +71,17 @@ def parse_upload(description: str, csv_file) -> List[TranscriptRow]:
                 character_description=description.strip(),
                 question=question,
                 answer=answer,
-                # No ground truth in production mode
                 ground_truth_score=None,
                 ground_truth_category=None,
                 ground_truth_nsfw=None,
             ))
 
     except Exception as e:
-        #logger.error(f"Failed to parse upload CSV: {e}")
         raise ValueError(f"Could not parse conversation CSV: {e}")
 
-    #logger.info(f"Parsed {len(rows)} rows from production upload")
     return rows
 
 
-# ---------------------------------------------------------------------------
-# Validation mode — parse research dataset sample
-# ---------------------------------------------------------------------------
 
 def parse_dataset_sample(csv_path: Union[str, Path]) -> List[TranscriptRow]:    
     """
@@ -138,10 +122,8 @@ def parse_dataset_sample(csv_path: Union[str, Path]) -> List[TranscriptRow]:
             description = str(row["description"]).strip()
 
             if not question or not answer:
-                #logger.warning(f"Skipping dataset row {i} — empty question or answer")
                 continue
 
-            # Parse ground truth fields safely
             ground_truth_score = _parse_float(row.get("judge_score"), row_index=i)
             ground_truth_category = str(row.get("judge_category", "")).strip() or None
             ground_truth_nsfw = _parse_bool(row.get("nsfw"), row_index=i)
@@ -157,16 +139,11 @@ def parse_dataset_sample(csv_path: Union[str, Path]) -> List[TranscriptRow]:
             ))
 
     except Exception as e:
-        #logger.error(f"Failed to parse validation dataset: {e}")
         raise ValueError(f"Could not parse validation CSV: {e}")
 
-    #logger.info(f"Parsed {len(rows)} rows from validation dataset at {path}")
     return rows
 
 
-# ---------------------------------------------------------------------------
-# Save and load RunResult
-# ---------------------------------------------------------------------------
 
 def save_run_result(result: RunResult) -> Path:
     """
@@ -187,38 +164,25 @@ def save_run_result(result: RunResult) -> Path:
     try:
         with open(output_path, "w") as f:
             json.dump(_run_result_to_dict(result), f, indent=2)
-        #logger.info(f"RunResult saved to {output_path}")
     except Exception as e:
-        #logger.error(f"Failed to save RunResult: {e}")
         raise
 
     return output_path
 
 
 def load_run_result(run_id: str) -> Optional[RunResult]:
-    """
-    Load a previously saved RunResult from disk by run_id prefix.
-
-    Args:
-        run_id : full or partial run ID (first 8 chars is enough)
-
-    Returns:
-        RunResult if found, None otherwise
-    """
+   
     matches = List(RAW_RUNS_DIR.glob(f"run_{run_id[:8]}*.json"))
 
     if not matches:
-        #logger.warning(f"No saved run found for run_id prefix '{run_id[:8]}'")
         return None
 
     path = matches[0]
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        #logger.info(f"Loaded RunResult from {path}")
         return _dict_to_run_result(data)
     except Exception as e:
-        #logger.error(f"Failed to load RunResult from {path}: {e}")
         return None
 
 
@@ -241,22 +205,18 @@ def list_saved_runs() -> List[Dict]:
                 "mode":        data.get("mode", "unknown"),
                 "total_rows":  data.get("total_rows", 0),
                 "unsafe_count": data.get("unsafe_count", 0),
-                "timestamp":   path.stem.split("_")[-1],  # extract from filename
+                "timestamp":   path.stem.split("_")[-1],  
                 "path":        str(path),
             })
         except Exception as e:
-            #logger.warning(f"Could not read summary from {path}: {e}")
             print("cannot read summary from path: ", e)
 
     return summaries
 
 
-# ---------------------------------------------------------------------------
 # Private helpers
-# ---------------------------------------------------------------------------
 
 def _validate_columns(df: pd.DataFrame, required: List[str], source: str):
-    """Raise a clear error if expected columns are missing."""
     missing = [col for col in required if col not in df.columns]
     if missing:
         raise ValueError(
@@ -266,16 +226,13 @@ def _validate_columns(df: pd.DataFrame, required: List[str], source: str):
 
 
 def _parse_float(value, row_index: int) -> Optional[float]:
-    """Safely parse a float value from a CSV cell."""
     try:
         return float(value)
     except (TypeError, ValueError):
-      # logger.warning(f"Could not parse float at row {row_index}: '{value}'")
         return None
 
 
 def _parse_bool(value, row_index: int) -> Optional[bool]:
-    """Safely parse a bool from a CSV cell (handles TRUE/FALSE strings)."""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -283,7 +240,6 @@ def _parse_bool(value, row_index: int) -> Optional[bool]:
     try:
         return bool(value)
     except (TypeError, ValueError):
-      # logger.warning(f"Could not parse bool at row {row_index}: '{value}'")
         return None
 
 
