@@ -9,8 +9,8 @@ Usage in llm_judge.py /question_generator.py:
     from api_clients.client_factory import AiClient
 """
 
-from api_clients.ai_client import AiClient          # OpenRouter free models
-from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
+from api_clients.ai_client import AiClient as OpenRouterClient # OpenRouter free models
+from api_clients.gemini_client import GeminiClient   # Gemini model
 
 class AiClient:
     """
