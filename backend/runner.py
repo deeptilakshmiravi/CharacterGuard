@@ -212,8 +212,11 @@ class Runner:
         nsfw_rows   = [r for r in row_results if r.nsfw]
 
         aggregate_scores = self.scorer.aggregate([r.scores for r in row_results])
+        
+        unsafe_count = len(unsafe_rows)
 
         remediation_tips = self.scorer.generate_remediation_tips(
+            unsafe_count,
             aggregate_scores=aggregate_scores,
             row_results=row_results,
             character_description=character_description,
