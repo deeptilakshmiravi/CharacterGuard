@@ -11,6 +11,6 @@ Usage in llm_judge.py /question_generator.py:
 
 #Toggle here 
 
-# from api_clients.ai_client import AiClient          # OpenRouter free models
-from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
+from api_clients.ai_client import AiClient          # OpenRouter free models
+# from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
 
