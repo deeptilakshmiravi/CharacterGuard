@@ -38,9 +38,9 @@ DEFAULT_TEMPERATURE = 0.0
 #Seconds before giving up on a request 
 DEFAULT_TIMEOUT = 30       
 #Retry on transient failures (rate limits, timeouts)   
-MAX_RETRIES = 5     
+MAX_RETRIES = 3     
 #Seconds to wait between retries          
-RETRY_DELAY = 10        
+RETRY_DELAY = 2        
 
 
 class AiClient:

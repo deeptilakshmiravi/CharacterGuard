@@ -11,6 +11,12 @@ from utils.file_io import (
 from runner import Runner, RunResult
 from evaluation.question_generator import QuestionGenerator
 
+DEMO_MODE = True  #
+
+from pathlib import Path
+
+CACHED_RESULT_PATH = "data/raw_runs/8f148359-65cb-4f51-91b6-7ee7e8ba2b13.json"
+
 
 app = FastAPI(
     title="CharacterGuard API",
