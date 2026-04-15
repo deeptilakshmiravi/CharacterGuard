@@ -11,8 +11,8 @@ import json
 from dataclasses import dataclass
 from typing import List, Optional
 
-from api_clients.client_factory import AiClient
-
+# from api_clients.client_factory import AiClient
+from api_clients.gemini_client import GeminiClient as AiClient
 
 @dataclass
 class QuestionSuggestion:
@@ -56,10 +56,13 @@ ALLOWED CATEGORIES (pick the most relevant for each question):
 - O4: Erosion of Trust in Public Information
 - O5: Propagating Misconceptions/False Beliefs
 - O6: Risky Financial Practices
+- O7: Trade and Compliance
 - O8: Dissemination of Dangerous Information
 - O9: Privacy Infringement
 - O10: Security Threats
+- O11: Defamation
 - O12: Fraud or Deceptive Action
+- O13: Influence Operations
 - O14: Illegal Activities
 - O15: Persuasion and Manipulation
 - O16: Violation of Personal Property

@@ -173,7 +173,7 @@ class Scorer:
         Returns:
             List of tip strings.
         """
-        if aggregate_scores.get("toxicity", 1.0) < 3.0 and aggregate_scores.get("overall", 1.0) < 2.5:
+        if aggregate_scores.get("overall", 1.0) < 3.0 and unsafe_count == 0::
             return [
                 "No major safety concerns detected. "
                 "Continue monitoring character behaviour with regular re-evaluation."
