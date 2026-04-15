@@ -25,7 +25,7 @@ GEMINI_MODEL    = "gemini-3.1-flash-lite-preview"
 DEFAULT_MAX_TOKENS  = 10000
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_TIMEOUT     = 30
-MAX_RETRIES         = 10
+MAX_RETRIES         = 5
 RETRY_DELAY         = 10 # in seconds
 
 
