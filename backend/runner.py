@@ -32,23 +32,21 @@ from evaluation.scorer import Scorer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-# ---------------------------------------------------------------------------
-# Data contracts
-# ---------------------------------------------------------------------------
-
 @dataclass
 class TranscriptRow:
     """
-    One row of input — a single question/answer exchange.
+    One row of input which is a single question/answer exchange.
     This is what file_io.py produces after parsing the user's upload.
     Both modes use this same shape.
     """
     row_index: int
     character_description: str
-    question: str                        # the user/attacker turn
-    answer: str                          # the character's response
+    #the user/attacker turn
+    question: str              
+    #the character's response
+    answer: str                          
 
-    # Only populated in validation mode (from the research dataset)
+    #Only populated in validation mode (from the research dataset)
     ground_truth_score: Optional[float] = None
     ground_truth_category: Optional[str] = None
     ground_truth_nsfw: Optional[bool] = None
@@ -56,26 +54,27 @@ class TranscriptRow:
 
 @dataclass
 class RowResult:
-    # Result for a single transcript row after evaluation
+    #Result for a single transcript row after evaluation
     row_index: int
     question: str
     answer: str
 
-    # Our evaluator outputs
-    rule_flags: List[str]                # e.g. ["O1: Toxic Content"]
-    llm_judge_verdict: Optional[str]     # "safe" | "unsafe" | "ambiguous"
-    judge_category: Optional[str]        # e.g. "O2: Unfair Representation"
-    question_category: Optional[str]     # e.g. "Hypothetical Scenario"
+    #Our evaluator outputs
+    rule_flags: List[str]                #eg: ["O1: Toxic Content"]
+    llm_judge_verdict: Optional[str]     #safe | unsafe | ambiguous
+    judge_category: Optional[str]        # eg: O2: Unfair Representation
+    question_category: Optional[str]     # eg: Hypothetical Scenario
     nsfw: bool
-    severity: Optional[str]              # "minor" | "major"
-    scores: Dict                         # dimension -> float e.g. {"toxicity": 0.8}
+    severity: Optional[str]              # minor | major
+    scores: Dict                         # dimension -> float eg: {toxicity: 0.8}
     all_categories: List[str]
 
     # Only populated in validation mode
     ground_truth_score: Optional[float] = None
     ground_truth_category: Optional[str] = None
     ground_truth_nsfw: Optional[bool] = None
-    score_delta: Optional[float] = None  # our score - ground truth score
+    # our score - ground truth score
+    score_delta: Optional[float] = None  
 
 
 @dataclass
@@ -97,10 +96,6 @@ class RunResult:
     status: str = "completed"            # "completed" | "error"
     error_message: Optional[str] = None
 
-
-# ---------------------------------------------------------------------------
-# Runner
-# ---------------------------------------------------------------------------
 
 class Runner:
     """
@@ -128,15 +123,11 @@ class Runner:
         self.llm_judge = LLMJudge()
         self.scorer = Scorer()
 
-    # ------------------------------------------------------------------
-    # Public entry point
-    # ------------------------------------------------------------------
-
+    #Public entry point
     def run(self, rows: List[TranscriptRow]) -> RunResult:
         from utils.file_io import save_run_result
         run_id = str(uuid.uuid4())
 
-        # Grab character description from the first row — same for all rows in a run
         character_description = rows[0].character_description if rows else ""
 
         row_results = [None] * len(rows)
@@ -154,7 +145,6 @@ class Runner:
                 except Exception as e:
                     print(f"Row {row_index} failed: {e}")
 
-        # Filter out any failed rows
         row_results = [r for r in row_results if r is not None]
 
         result = self._aggregate(run_id, row_results, character_description)
@@ -162,19 +152,16 @@ class Runner:
 
         return result
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
+
+    #Private helpers
 
     def _evaluate_row(self, row: TranscriptRow) -> RowResult:
-        # 1. Rule-based layer (always runs first — fast, no API cost)
         rule_flags = self.rule_evaluator.evaluate(
             description=row.character_description,
             question=row.question,
             answer=row.answer,
         )
 
-        # 2. LLM judge layer
         llm_verdict, llm_category, question_category, nsfw, severity = \
             self.llm_judge.judge(
                 description=row.character_description,
@@ -183,10 +170,8 @@ class Runner:
                 rule_flags=rule_flags,
             )
 
-        # Primary category: first rule flag wins, otherwise use LLM category
         final_judge_category = rule_flags[0] if rule_flags else llm_category
 
-        # 3. Dimension scores
         scores = self.scorer.score_row(
             rule_flags=rule_flags,
             llm_verdict=llm_verdict,
@@ -194,7 +179,6 @@ class Runner:
             nsfw=nsfw,
         )
 
-        # 4. Ground truth delta (validation mode only)
         our_score = scores.get("overall", 0.0)
         score_delta = None
         if self.mode == "validation" and row.ground_truth_score is not None:
@@ -228,15 +212,16 @@ class Runner:
         nsfw_rows   = [r for r in row_results if r.nsfw]
 
         aggregate_scores = self.scorer.aggregate([r.scores for r in row_results])
+        
+        unsafe_count = len(unsafe_rows)
 
-        # LLM-generated tips, with static fallback inside generate_remediation_tips
         remediation_tips = self.scorer.generate_remediation_tips(
+            unsafe_count,
             aggregate_scores=aggregate_scores,
             row_results=row_results,
             character_description=character_description,
         )
 
-        # Validation mode metrics
         ground_truth_agreement_rate = None
         category_match_rate = None
         if self.mode == "validation":
@@ -269,7 +254,6 @@ class Runner:
         return round(len(agreements) / len(rows_with_truth), 3)
 
     def _compute_category_match_rate(self, row_results: List[RowResult]) -> float:
-        # Measures how often our judge_category matches the dataset's judge_category
         rows_with_truth = [r for r in row_results if r.ground_truth_category is not None]
         if not rows_with_truth:
             return 0.0

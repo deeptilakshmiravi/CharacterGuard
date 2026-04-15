@@ -1,13 +1,11 @@
 """
 Thin wrapper around the Google Gemini API.
 
-Drop-in replacement for AiClient — exposes the same call() interface
+Drop-in replacement for AiClient, exposes the same call() interface
 so llm_judge.py and question_generator.py don't need to change.
 
-Model: gemini-2.5-flash (fast, cheap, strong reasoning)
-
 Requires:
-    GEMINI_API_KEY in your .env file
+    GEMINI_API_KEY in .env file
 """
 
 import json
@@ -20,9 +18,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 GEMINI_MODEL    = "gemini-3.1-flash-lite-preview"
@@ -34,9 +29,7 @@ MAX_RETRIES         = 3
 RETRY_DELAY         = 2
 
 
-# ---------------------------------------------------------------------------
 # GeminiClient
-# ---------------------------------------------------------------------------
 
 class GeminiClient:
     """
@@ -71,7 +64,6 @@ class GeminiClient:
         self.temperature = temperature
         self.timeout     = timeout
 
-        # Gemini generateContent endpoint with key as query param
         self._url = (
             f"{GEMINI_BASE_URL}/{self.model}:generateContent"
             f"?key={self.api_key}"
@@ -127,9 +119,7 @@ class GeminiClient:
             "Check your API key and network connection."
         )
 
-    # ------------------------------------------------------------------
     # Private helpers
-    # ------------------------------------------------------------------
 
     def _build_payload(self, system_prompt: str, user_message: str) -> dict:
         """
@@ -172,7 +162,6 @@ class GeminiClient:
         try:
             candidate = response_json["candidates"][0]
 
-            # Gemini may refuse to generate content (e.g. safety filters)
             finish_reason = candidate.get("finishReason", "")
             if finish_reason == "PROHIBITED_CONTENT" or "content" not in candidate:
                 raise RuntimeError(
