@@ -20,13 +20,13 @@ load_dotenv()
 
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-GEMINI_MODEL    = "gemini-2.5-flash"
+GEMINI_MODEL    = "gemini-3.1-flash-lite"
 
 DEFAULT_MAX_TOKENS  = 10000
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_TIMEOUT     = 30
 MAX_RETRIES         = 3
-RETRY_DELAY         = 2 # in seconds
+RETRY_DELAY         = 5 # in seconds
 
 
 # GeminiClient
