@@ -3,6 +3,51 @@ import requests
 import pandas as pd
 import sanitizer
 import streamlit.components.v1 as components
+import io
+
+# --- PASTE PARSER FUNCTION (SPEAKER-AWARE) ---
+def parse_pasted_chat(raw_text, user_name, char_name):
+    """Smarter parser that handles multi-paragraph responses by looking for speaker names."""
+    lines = raw_text.split('\n')
+    
+    questions = []
+    answers = []
+    
+    current_speaker = None
+    current_text = []
+    
+    for line in lines:
+        clean_line = line.strip()
+        
+        # Check if the line is exactly the User's name
+        if clean_line.lower() == user_name.strip().lower():
+            if current_speaker == "char" and current_text:
+                answers.append("\n\n".join(current_text).strip())
+            current_speaker = "user"
+            current_text = []
+            
+        # Check if the line is exactly the Character's name
+        elif clean_line.lower() == char_name.strip().lower():
+            if current_speaker == "user" and current_text:
+                questions.append("\n\n".join(current_text).strip())
+            current_speaker = "char"
+            current_text = []
+            
+        # If it's not a name, it's dialogue
+        else:
+            if current_speaker and clean_line:
+                current_text.append(clean_line)
+                
+    # Catch the very last AI answer at the end of the copy-paste
+    if current_speaker == "char" and current_text:
+        answers.append("\n\n".join(current_text).strip())
+        
+    # Ensure our lists are the exact same length to prevent dataframe errors
+    min_len = min(len(questions), len(answers))
+    return pd.DataFrame({
+        'question': questions[:min_len], 
+        'answer': answers[:min_len]
+    })
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="CharacterGuard | Security Audit", page_icon="🛡️", layout="wide")
@@ -38,6 +83,8 @@ if 'description' not in st.session_state:
     st.session_state.description = ""
 if 'questions_data' not in st.session_state:
     st.session_state.questions_data = []
+if 'parsed_csv_string' not in st.session_state:
+    st.session_state.parsed_csv_string = None
 
 def go_to_step(step):
     st.session_state.current_step = step
@@ -57,8 +104,8 @@ with st.expander("📖 How to use CharacterGuard", expanded=False):
     **Follow this step-by-step process to audit your character:**
     1. **Define the Character:** Paste your character's system prompt or description in Step 1.
     2. **Generate Prompts:** The LLM will analyze the persona and return custom red-team questions.
-    3. **Chat on Janitor AI:** Take those generated questions, chat with your character on Janitor AI, and copy the character's responses into a CSV file.
-    4. **Run the Audit:** Upload that CSV file in Step 3 and click **🚀 Run Security Audit** to get your final safety verdict!
+    3. **Chat on Platform:** Take those generated questions, chat with your character, and bring the logs to Step 3.
+    4. **Run the Audit:** Upload your CSV or Paste the chat in Step 3 and click **🚀 Run Security Audit** to get your final safety verdict!
     """)
 
 st.divider()
@@ -100,7 +147,7 @@ if st.session_state.current_step == 1:
 # ==========================================
 elif st.session_state.current_step == 2:
     st.subheader("Step 2: Generated Test Questions")
-    st.info("💡 **Action Required:** Use these generated questions to chat with your character on Janitor AI. Copy the responses into a CSV file, then proceed to Step 3.")
+    st.info("💡 **Action Required:** Use these generated questions to chat with your character. Bring the responses to Step 3.")
     
     with st.container(border=True):
         if st.session_state.questions_data:
@@ -134,21 +181,69 @@ elif st.session_state.current_step == 3:
             go_to_step(2)
             st.rerun()
             
-    st.markdown("Upload the conversation CSV to analyze the character's behavior.")
-    uploaded_file = st.file_uploader("Choose a CSV file (questions & answers)", type=["csv"])
+    st.markdown("How would you like to import your red-team testing logs?")
     
+    # --- THE NEW TAB LAYOUT ---
+    tab1, tab2 = st.tabs(["📝 Quick Paste (Recommended)", "📁 Upload CSV"])
+    
+    with tab1:
+        st.write("Drag-select your conversation in the chat window, copy (Ctrl+C), and paste below.")
+        
+        # --- NEW: Speaker Labels ---
+        col_u, col_c = st.columns(2)
+        user_name = col_u.text_input("Your Username (as shown in chat):", value="User")
+        char_name = col_c.text_input("Character's Name (as shown in chat):", value="Character")
+        # ---------------------------
+
+        pasted_text = st.text_area("Paste Chat Log Here:", height=200)
+        
+        if st.button("Parse and Preview"):
+            if pasted_text:
+                try:
+                    parsed_df = parse_pasted_chat(pasted_text, user_name, char_name)
+                    
+                    if parsed_df.empty:
+                        st.error("Could not find those exact names in the text. Please check spelling!")
+                    else:
+                        st.success("✅ Chat parsed successfully!")
+                        st.dataframe(parsed_df, use_container_width=True)
+                        
+                        # Convert parsed dataframe to CSV string for the backend
+                        csv_buffer = io.StringIO()
+                        parsed_df.to_csv(csv_buffer, index=False)
+                        st.session_state.parsed_csv_string = csv_buffer.getvalue()
+                except Exception as e:
+                    st.error("Oops! Couldn't parse the text. Ensure you copied the full alternating blocks.")
+
+    with tab2:
+        st.write("Upload the conversation CSV to analyze the character's behavior.")
+        uploaded_file = st.file_uploader("Choose a CSV file (questions & answers)", type=["csv"])
+        if uploaded_file:
+            # Clear the pasted text state if they choose to upload a file instead
+            st.session_state.parsed_csv_string = None
+
+    # --- UNIFIED AUDIT SUBMISSION ---
+    st.divider()
     if st.button("🚀 Run Security Audit", type="primary", use_container_width=True):
-        if not uploaded_file:
-            st.error("Please provide a conversation file.")
+        csv_payload = None
+        file_name = "pasted_chat.csv"
+        
+        # Check which method the user used
+        if st.session_state.parsed_csv_string and not uploaded_file:
+            csv_payload = st.session_state.parsed_csv_string
+        elif uploaded_file:
+            file_name = uploaded_file.name
+            st.write("🧹 Sanitizing CSV data...")
+            csv_payload, _ = sanitizer.sanitize_csv(uploaded_file)
+            
+        if not csv_payload:
+            st.error("Please parse a pasted chat or upload a CSV file before running the audit.")
         else:
             with st.status("🔍 Initializing CharacterGuard AI...", expanded=True) as status:
-                st.write("🧹 Sanitizing CSV data...")
-                clean_csv_string, clean_rows = sanitizer.sanitize_csv(uploaded_file)
-                
                 st.write("📥 Processing records through API...")
                 url = "https://charactergaurd-1.onrender.com/run/production"
                 data = {"description": st.session_state.description}
-                files = {"conversations": (uploaded_file.name, clean_csv_string, "text/csv")}
+                files = {"conversations": (file_name, csv_payload, "text/csv")}
                 
                 try:
                     response = requests.post(url, data=data, files=files)
@@ -159,10 +254,7 @@ elif st.session_state.current_step == 3:
 
                         # --- CLEAN UX RESULTS PAGE ---
                         st.header("📊 Security Audit Report")
-                        
-                        # CREATE 3-COLUMN LAYOUT
                         res_col1, res_col2, res_col3 = st.columns(3)
-
                         row_results = results.get("row_results", [])
 
                         # --- GET GLOBAL VERDICT FIRST ---
@@ -292,6 +384,7 @@ elif st.session_state.current_step == 3:
                             st.session_state.current_step = 1
                             st.session_state.description = ""
                             st.session_state.questions_data = []
+                            st.session_state.parsed_csv_string = None
                             st.rerun()
 
                     else:
