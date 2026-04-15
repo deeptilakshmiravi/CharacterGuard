@@ -40,7 +40,7 @@ DEFAULT_TIMEOUT = 30
 #Retry on transient failures (rate limits, timeouts)   
 MAX_RETRIES = 10     
 #Seconds to wait between retries          
-RETRY_DELAY = 2               
+RETRY_DELAY = 10        
 
 
 class AiClient:

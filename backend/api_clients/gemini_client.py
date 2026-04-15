@@ -26,7 +26,7 @@ DEFAULT_MAX_TOKENS  = 10000
 DEFAULT_TEMPERATURE = 0.0
 DEFAULT_TIMEOUT     = 30
 MAX_RETRIES         = 10
-RETRY_DELAY         = 2
+RETRY_DELAY         = 10 # in seconds
 
 
 # GeminiClient
