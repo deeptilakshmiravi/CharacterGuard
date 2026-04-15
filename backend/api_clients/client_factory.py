@@ -9,8 +9,21 @@ Usage in llm_judge.py /question_generator.py:
     from api_clients.client_factory import AiClient
 """
 
-#Toggle here 
-
 from api_clients.ai_client import AiClient          # OpenRouter free models
-# from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
+from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
 
+class AiClient:
+    """
+    Tries GeminiClient first. Falls back to OpenRouterClient on 503 or RuntimeError.
+    No manual toggling needed — just works.
+    """
+    def __init__(self):
+        self._gemini = GeminiClient()
+        self._openrouter = OpenRouterClient()
+
+    def call(self, system_prompt: str, user_message: str) -> str:
+        try:
+            return self._gemini.call(system_prompt, user_message)
+        except RuntimeError as e:
+            print(f"Gemini failed ({e}), falling back to OpenRouter...")
+            return self._openrouter.call(system_prompt, user_message)
