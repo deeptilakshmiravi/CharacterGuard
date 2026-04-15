@@ -14,12 +14,11 @@ from api_clients.gemini_client import GeminiClient as AiClient   # Gemini model
 
 class AiClient:
     """
-    Tries GeminiClient first. Falls back to OpenRouterClient on 503 or RuntimeError.
-    No manual toggling needed — just works.
+    Tries GeminiClient first. Falls back to OpenRouterClient on 503 or RuntimeError
     """
     def __init__(self):
-        self._gemini = GeminiClient()
         self._openrouter = OpenRouterClient()
+        self._gemini = GeminiClient()
 
     def call(self, system_prompt: str, user_message: str) -> str:
         try:
