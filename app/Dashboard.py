@@ -5,18 +5,49 @@ import sanitizer
 import streamlit.components.v1 as components
 import io
 
-# --- PASTE PARSER FUNCTION ---
-def parse_pasted_chat(raw_text):
-    """Splits raw pasted text into Question/Answer blocks."""
-    blocks = [block.strip() for block in raw_text.split('\n\n') if block.strip()]
+# --- PASTE PARSER FUNCTION (SPEAKER-AWARE) ---
+def parse_pasted_chat(raw_text, user_name, char_name):
+    """Smarter parser that handles multi-paragraph responses by looking for speaker names."""
+    lines = raw_text.split('\n')
+    
     questions = []
     answers = []
-    for i in range(0, len(blocks) - 1, 2):
-        q_text = blocks[i].replace("User\n", "").strip()
-        a_text = blocks[i+1].replace("Character\n", "").strip()
-        questions.append(q_text)
-        answers.append(a_text)
-    return pd.DataFrame({'question': questions, 'answer': answers})
+    
+    current_speaker = None
+    current_text = []
+    
+    for line in lines:
+        clean_line = line.strip()
+        
+        # Check if the line is exactly the User's name
+        if clean_line.lower() == user_name.strip().lower():
+            if current_speaker == "char" and current_text:
+                answers.append("\n\n".join(current_text).strip())
+            current_speaker = "user"
+            current_text = []
+            
+        # Check if the line is exactly the Character's name
+        elif clean_line.lower() == char_name.strip().lower():
+            if current_speaker == "user" and current_text:
+                questions.append("\n\n".join(current_text).strip())
+            current_speaker = "char"
+            current_text = []
+            
+        # If it's not a name, it's dialogue
+        else:
+            if current_speaker and clean_line:
+                current_text.append(clean_line)
+                
+    # Catch the very last AI answer at the end of the copy-paste
+    if current_speaker == "char" and current_text:
+        answers.append("\n\n".join(current_text).strip())
+        
+    # Ensure our lists are the exact same length to prevent dataframe errors
+    min_len = min(len(questions), len(answers))
+    return pd.DataFrame({
+        'question': questions[:min_len], 
+        'answer': answers[:min_len]
+    })
 
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="CharacterGuard | Security Audit", page_icon="🛡️", layout="wide")
@@ -157,21 +188,32 @@ elif st.session_state.current_step == 3:
     
     with tab1:
         st.write("Drag-select your conversation in the chat window, copy (Ctrl+C), and paste below.")
+        
+        # --- NEW: Speaker Labels ---
+        col_u, col_c = st.columns(2)
+        user_name = col_u.text_input("Your Username (as shown in chat):", value="User")
+        char_name = col_c.text_input("Character's Name (as shown in chat):", value="Character")
+        # ---------------------------
+
         pasted_text = st.text_area("Paste Chat Log Here:", height=200)
         
         if st.button("Parse and Preview"):
             if pasted_text:
                 try:
-                    parsed_df = parse_pasted_chat(pasted_text)
-                    st.success("✅ Chat parsed successfully!")
-                    st.dataframe(parsed_df, use_container_width=True)
+                    parsed_df = parse_pasted_chat(pasted_text, user_name, char_name)
                     
-                    # Convert parsed dataframe to CSV string for the backend
-                    csv_buffer = io.StringIO()
-                    parsed_df.to_csv(csv_buffer, index=False)
-                    st.session_state.parsed_csv_string = csv_buffer.getvalue()
+                    if parsed_df.empty:
+                        st.error("Could not find those exact names in the text. Please check spelling!")
+                    else:
+                        st.success("✅ Chat parsed successfully!")
+                        st.dataframe(parsed_df, use_container_width=True)
+                        
+                        # Convert parsed dataframe to CSV string for the backend
+                        csv_buffer = io.StringIO()
+                        parsed_df.to_csv(csv_buffer, index=False)
+                        st.session_state.parsed_csv_string = csv_buffer.getvalue()
                 except Exception as e:
-                    st.error("Oops! Couldn't parse the text. Make sure you copied the alternating chat blocks.")
+                    st.error("Oops! Couldn't parse the text. Ensure you copied the full alternating blocks.")
 
     with tab2:
         st.write("Upload the conversation CSV to analyze the character's behavior.")
